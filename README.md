@@ -1,36 +1,103 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RugDoor - Onchain Door Game on Mantle
 
-## Getting Started
+A provably fair, multiplier-based door selection game built on Mantle Testnet. Pick doors, avoid the rug, multiply your winnings.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Provably Fair** - Cryptographic verification ensures transparent gameplay
+- **Multiple Difficulties** - 2-5 doors with varying risk/reward ratios
+- **Neobrutalism UI** - Bold design with smooth Framer Motion animations
+- **Privy Auth** - Login via email, social accounts, or crypto wallets
+- **Demo Mode** - Try the game without connecting a wallet
+- **Real Leaderboard** - See top players and their stats
+
+## Project Structure
+
+```
+src/
+├── app/                    # Next.js app router
+│   ├── globals.css         # Global styles & Tailwind
+│   ├── layout.tsx          # Root layout with providers
+│   └── page.tsx            # Main entry (landing/game)
+├── components/
+│   ├── game/               # Game components
+│   │   ├── RugRumbleGameBoard.tsx
+│   │   ├── RugDoor.tsx
+│   │   ├── Leaderboard.tsx
+│   │   └── ...
+│   ├── landing/            # Landing page components
+│   │   ├── Header.tsx
+│   │   ├── GamePreview.tsx
+│   │   ├── LandingLeaderboard.tsx
+│   │   ├── CTASection.tsx
+│   │   └── Footer.tsx
+│   ├── ui/                 # Reusable UI components
+│   │   └── Button.tsx
+│   └── wallet/             # Wallet components
+│       └── ConnectButton.tsx
+├── config/
+│   └── chains.ts           # Chain configuration (Mantle Sepolia)
+├── lib/
+│   └── utils.ts            # Utility functions
+├── providers/
+│   └── Providers.tsx       # App providers (Privy, Wagmi, React Query)
+└── types/
+    └── game.ts             # TypeScript types
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Quick Start
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# Install dependencies
+npm install
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Copy environment template
+cp env.local.config .env.local
 
-## Learn More
+# Run development server
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Environment Variables
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```env
+NEXT_PUBLIC_PRIVY_APP_ID=your_privy_app_id
+NEXT_PUBLIC_CONTRACT_ADDRESS=0x...
+NEXT_PUBLIC_CHAIN_ID=5003
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Tech Stack
 
-## Deploy on Vercel
+- **Next.js 16** - React framework
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Styling with neobrutalism design
+- **Framer Motion** - Animations
+- **Privy** - Web3 authentication
+- **Wagmi + Viem** - Ethereum interactions
+- **Mantle Sepolia** - Testnet blockchain
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Game Flow
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Landing page shows game preview with animated doors
+2. User clicks "Sign In" → Privy auth modal (Mantle testnet)
+3. User clicks "Play Demo" → Demo mode without wallet
+4. After auth → Game board with betting interface
+5. Pick doors to advance levels, avoid the rug door
+6. Cash out anytime after level 1
+
+## Development Roadmap
+
+- [x] Landing page UI
+- [x] Game preview animation
+- [x] Leaderboard display
+- [x] Demo mode
+- [ ] Smart contract integration
+- [ ] Real betting with MNT
+- [ ] Provably fair verification
+- [ ] Lottery system
+- [ ] Referral system
+
+---
+
+Built for Web3 gaming on Mantle

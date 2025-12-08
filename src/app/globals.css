@@ -1,26 +1,109 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* === SHADCN/NEOBRUTALISM BASE === */
+    --background: 50 100% 97%;
+    --foreground: 0 0% 0%;
+    --card: 220 13% 10%;
+    --card-foreground: 0 0% 100%;
+    --popover: 50 100% 97%;
+    --popover-foreground: 0 0% 0%;
+    --secondary-background: 30 100% 97%;
+    --secondary-foreground: 0 0% 0%;
+    --muted: 220 10% 40%;
+    --muted-foreground: 220 10% 60%;
+    --accent: 30 50% 90%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 10% 20%;
+    --input: 0 0% 100%;
+    --ring: 0 0% 0%;
+    --radius: 6px;
+    
+    /* === PRIMARY ACCENT (Lime Green) === */
+    --main: 82 85% 55%;
+    --main-foreground: 0 0% 0%;
+    
+    /* === GAME DESIGN SYSTEM === */
+    --color-bg-dark: #0a0a0f;
+    --color-bg-card: #1a1a2e;
+    --color-bg-elevated: #252540;
+    --color-border-subtle: #2a2a3e;
+    
+    /* Accent Colors */
+    --color-purple: #8B5CF6;
+    --color-purple-dark: #6d28d9;
+    --color-lime: #a3e635;
+    --color-yellow: #FACC15;
+    --color-success: #22C55E;
+    --color-danger: #EF4444;
+    
+    /* Text */
+    --color-text-primary: #FFFFFF;
+    --color-text-secondary: #A1A1AA;
+    --color-text-muted: #71717A;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    background-color: var(--color-bg-dark);
+    color: var(--color-text-primary);
+    font-feature-settings: "ss01", "ss02", "cv01";
+    @apply antialiased;
+  }
+
+  .bg-grid {
+    background-image: 
+      linear-gradient(rgba(163, 230, 53, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(163, 230, 53, 0.06) 1px, transparent 1px);
+    background-size: 40px 40px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .game-card {
+    @apply border-2 rounded-xl;
+    background-color: var(--color-bg-card);
+    border-color: var(--color-purple);
+  }
+
+  .game-input {
+    @apply w-full px-4 py-2.5 text-sm font-medium rounded-md outline-none transition-colors;
+    background-color: var(--color-bg-elevated);
+    border: 1px solid var(--color-border-subtle);
+    color: white;
+  }
+
+  .game-input:focus {
+    border-color: var(--color-purple);
+  }
+
+  .game-input::placeholder {
+    color: var(--color-text-muted);
+  }
+
+  .btn-game {
+    @apply px-4 py-2.5 font-semibold rounded-md transition-all;
+    @apply border-2 border-black shadow-brutal;
+    @apply hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none;
+  }
+}
+
+@layer utilities {
+  .text-success { color: var(--color-success); }
+  .text-danger { color: var(--color-danger); }
+  .text-muted { color: var(--color-text-muted); }
+  .text-secondary { color: var(--color-text-secondary); }
+  .bg-game-card { background-color: var(--color-bg-card); }
+  .bg-game-elevated { background-color: var(--color-bg-elevated); }
+  .bg-lime { background-color: var(--color-lime); }
+  .border-purple { border-color: var(--color-purple); }
+  .border-subtle { border-color: var(--color-border-subtle); }
 }

@@ -4,16 +4,23 @@ import { PrivyProvider } from '@privy-io/react-auth'
 import { WagmiProvider } from 'wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { wagmiConfig, mantleSepolia } from '@/config/chains'
-import { ReactNode } from 'react'
-
-const queryClient = new QueryClient()
+import { ReactNode, useState } from 'react'
 
 interface ProvidersProps {
   children: ReactNode
 }
 
 export function Providers({ children }: ProvidersProps) {
-  // Get Privy app ID from environment variable (will be added later)
+  // Create QueryClient instance lazily to avoid React 19 hydration issues
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 60 * 1000, // 1 minute
+      },
+    },
+  }))
+
+  // Get Privy app ID from environment variable
   const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID || 'placeholder'
 
   return (
@@ -22,17 +29,16 @@ export function Providers({ children }: ProvidersProps) {
         <PrivyProvider
           appId={privyAppId}
           config={{
-            loginMethods: ['email', 'wallet', 'google', 'twitter'],
+            loginMethods: ['wallet'],
             appearance: {
               theme: 'dark',
               accentColor: '#c8ff00',
               logo: '/logo.png',
-              showWalletLoginFirst: false,
+              showWalletLoginFirst: true,
             },
             embeddedWallets: {
-              ethereum: {
-                createOnLogin: 'users-without-wallets',
-              },
+              createOnLogin: 'all-users',
+              requireUserPasswordOnCreate: false,
             },
             defaultChain: mantleSepolia,
             supportedChains: [mantleSepolia],

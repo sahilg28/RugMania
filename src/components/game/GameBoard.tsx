@@ -12,6 +12,15 @@ import { usePrivy } from '@privy-io/react-auth'
 import { Button } from '@/components/ui/Button'
 import { Header } from '@/components/landing/Header'
 import { Footer } from '@/components/landing/Footer'
+import { useEmbeddedWallet } from '@/hooks/useEmbeddedWallet'
+import { createPublicClient, http, formatEther } from 'viem'
+import { mantleSepolia } from '@/config/chains'
+
+// Create a public client for reading balance
+const publicClient = createPublicClient({
+  chain: mantleSepolia,
+  transport: http('https://rpc.sepolia.mantle.xyz'),
+})
 
 // Motivational messages for gameplay
 const GAME_MESSAGES = {
@@ -40,6 +49,8 @@ interface GameBoardProps {
 
 export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
   const { logout, login } = usePrivy()
+  const { address } = useEmbeddedWallet()
+  const [realBalance, setRealBalance] = useState<bigint>(BigInt(0))
   const [gameState, setGameState] = useState<GameState>({
     phase: 'idle',
     betAmount: 0,
@@ -50,10 +61,29 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
     potentialWin: 0,
   })
   
-  const [balance, setBalance] = useState(10)
   const [amount, setAmount] = useState('')
   const [selectedDifficulty, setSelectedDifficulty] = useState<number>(5)
   const [currentLevel, setCurrentLevel] = useState(1)
+
+  // Fetch real balance from embedded wallet
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (!address || isDemo) return
+      try {
+        const bal = await publicClient.getBalance({ address })
+        setRealBalance(bal)
+      } catch (error) {
+        console.error('Failed to fetch balance:', error)
+      }
+    }
+    fetchBalance()
+    // Poll every 10 seconds
+    const interval = setInterval(fetchBalance, 10000)
+    return () => clearInterval(interval)
+  }, [address, isDemo])
+
+  // Convert balance to number for game logic
+  const balance = isDemo ? 10 : parseFloat(formatEther(realBalance))
 
   // Random motivational message based on game state
   const gameMessage = useMemo(() => {
@@ -98,9 +128,8 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
       potentialWin: betAmount * MULTIPLIERS[selectedDifficulty][0],
     })
     setCurrentLevel(1)
-    if (!isDemo) {
-      setBalance(prev => prev - betAmount)
-    }
+    // Note: In a real game, betting would deduct from the blockchain balance
+    // For now, the balance shown is just the real wallet balance
   }, [amount, balance, selectedDifficulty, isDemo])
 
   // Demo mode does NOT auto-start - user clicks PLAY button
@@ -140,9 +169,7 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
             ...prev,
             phase: 'won',
           }))
-          if (!isDemo) {
-            setBalance(prev => prev + gameState.potentialWin)
-          }
+          // Note: Winning would add to blockchain balance in production
         } else {
           const freshDoors = initializeDoors(gameState.difficulty)
           setGameState(prev => ({
@@ -161,9 +188,7 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
   const handleCashOut = useCallback(() => {
     if (gameState.phase !== 'playing' || gameState.currentLevel <= 1) return
     confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } })
-    if (!isDemo) {
-      setBalance(prev => prev + gameState.potentialWin)
-    }
+    // Note: Cash out would add to blockchain balance in production
     setGameState(prev => ({ ...prev, phase: 'won' }))
   }, [gameState, isDemo])
 
@@ -192,7 +217,7 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
 
   return (
     <div className="h-screen bg-grid flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--color-bg-dark)' }}>
-      <Header isGame isDemo={isDemo} balance={balance} onExit={handleExit} />
+      <Header isGame isDemo={isDemo} onExit={handleExit} />
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-3 overflow-hidden">

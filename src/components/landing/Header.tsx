@@ -2,21 +2,21 @@
 
 import { motion } from 'framer-motion'
 import { usePrivy } from '@privy-io/react-auth'
-import { useAccount } from 'wagmi'
-import { Wallet, LogOut, Plus, ArrowUpRight } from 'lucide-react'
+import { Wallet, LogOut, ArrowUpRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { GameWalletChip } from '@/components/wallet/GameWalletChip'
+import { useEmbeddedWallet } from '@/hooks/useEmbeddedWallet'
 import Link from 'next/link'
 
 interface HeaderProps {
   isGame?: boolean
   isDemo?: boolean
-  balance?: number
   onExit?: () => void
 }
 
-export function Header({ isGame = false, isDemo = false, balance = 0, onExit }: HeaderProps) {
+export function Header({ isGame = false, isDemo = false, onExit }: HeaderProps) {
   const { login, logout, ready, authenticated } = usePrivy()
-  const { address } = useAccount()
+  const { address: embeddedAddress } = useEmbeddedWallet()
 
   const handleExit = () => {
     if (onExit) {
@@ -72,32 +72,25 @@ export function Header({ isGame = false, isDemo = false, balance = 0, onExit }: 
             ) : showGameHeader ? (
               /* REAL GAME - Full wallet controls */
               <>
-                {/* Wallet Balance */}
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-zinc-700 bg-zinc-900">
-                  <Wallet className="w-4 h-4 text-main" />
-                  <span className="text-white font-semibold text-sm">{balance.toFixed(2)} MNT</span>
-                </div>
-                {/* Add Funds */}
-                <button 
-                  title="Add Funds"
-                  className="w-9 h-9 flex items-center justify-center rounded-md bg-lime-400 border-2 border-black text-black hover:bg-lime-300 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-                {/* Address */}
+                {/* Embedded Wallet Balance + Add/Withdraw */}
+                <GameWalletChip />
+                
+                {/* Embedded Wallet Address (Internal Game Wallet) */}
                 <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md border border-zinc-700 bg-zinc-900">
                   <span className="text-white font-semibold text-sm">
-                    {address ? `${address.slice(0, 4)}...${address.slice(-4)}` : '0x00...00'}
+                    {embeddedAddress ? `${embeddedAddress.slice(0, 4)}...${embeddedAddress.slice(-4)}` : '0x00...00'}
                   </span>
                 </div>
+                
                 {/* External Link - View on Explorer */}
                 <button 
                   title="View on Explorer"
-                  onClick={() => address && window.open(`https://sepolia.mantlescan.xyz/address/${address}`, '_blank')}
+                  onClick={() => embeddedAddress && window.open(`https://sepolia.mantlescan.xyz/address/${embeddedAddress}`, '_blank')}
                   className="w-9 h-9 flex items-center justify-center rounded-md border border-zinc-700 bg-zinc-900 text-white hover:border-zinc-600 transition-colors"
                 >
                   <ArrowUpRight className="w-4 h-4" />
                 </button>
+                
                 {/* Exit */}
                 <button
                   title="Exit Game"

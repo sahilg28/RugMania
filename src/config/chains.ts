@@ -1,5 +1,6 @@
 import { defineChain } from 'viem'
-import { http, createConfig } from 'wagmi'
+import { http } from 'wagmi'
+import { createConfig } from '@privy-io/wagmi'
 
 // Mantle Sepolia Testnet - Complete config for Privy compatibility
 export const mantleSepolia = defineChain({
@@ -37,6 +38,7 @@ export const mantleSepolia = defineChain({
   testnet: true,
 })
 
+
 export const wagmiConfig = createConfig({
   chains: [mantleSepolia],
   transports: {
@@ -44,7 +46,7 @@ export const wagmiConfig = createConfig({
   },
 })
 
-// Contract addresses (will be updated when deployed)
 export const CONTRACT_ADDRESSES = {
-  doorRunner: '0x0000000000000000000000000000000000000000', // Update after deployment
-} as const
+  // doorRunner: '0x0000000000000000000000000000000000000000', // Update after deployment
+  doorRunner: "0x3B909Be5ABD7861028Bf622b04cF205391D52125",
+} as const;

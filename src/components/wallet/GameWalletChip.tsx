@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Wallet, Plus, ArrowDownToLine } from 'lucide-react'
 import { createPublicClient, http, formatEther, type Address } from 'viem'
+import { useAccount, useWriteContract } from 'wagmi'
 import { mantleSepolia } from '@/config/chains'
-import { useEmbeddedWallet } from '@/hooks/useEmbeddedWallet'
 import { AddFundsModal } from './AddFundsModal'
 import { WithdrawModal } from './WithdrawModal'
 
@@ -16,7 +16,8 @@ const publicClient = createPublicClient({
 })
 
 export function GameWalletChip() {
-  const { address, walletClient, isLoading } = useEmbeddedWallet()
+  const { address, isConnected } = useAccount()
+  const { writeContractAsync } = useWriteContract()
   const [balance, setBalance] = useState<bigint>(BigInt(0))
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isAddFundsOpen, setIsAddFundsOpen] = useState(false)
@@ -53,24 +54,14 @@ export function GameWalletChip() {
 
   // Handle withdrawal transaction
   const handleWithdraw = async (toAddress: Address, amount: bigint) => {
-    if (!walletClient || !address) throw new Error('Wallet client not ready')
-
-    const hash = await walletClient.sendTransaction({
-      account: address,
-      to: toAddress,
-      value: amount,
-      chain: mantleSepolia,
-    })
-
-    console.log('Withdrawal transaction hash:', hash)
+    if (!address) throw new Error('Wallet not connected')
     
-    // Wait a bit and refresh balance
-    setTimeout(() => {
-      fetchBalance()
-    }, 2000)
+    // For now, just show a message - withdrawal needs contract integration
+    console.log('Withdrawal requested:', { toAddress, amount: amount.toString() })
+    alert('Withdrawal functionality requires contract integration')
   }
 
-  if (isLoading || !address) {
+  if (!isConnected || !address) {
     return (
       <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-zinc-700 bg-zinc-900">
         <Wallet className="w-4 h-4 text-zinc-500 animate-pulse" />

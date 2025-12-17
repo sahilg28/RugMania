@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/providers/Providers";
+import { ToastContainer } from "react-toastify";
 
 const spaceGrotesk = Space_Grotesk({ 
   subsets: ["latin"],
@@ -51,6 +52,19 @@ export default function RootLayout({
       <body className="font-sans antialiased" suppressHydrationWarning>
         <Providers>
           {children}
+           <ToastContainer
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="dark"
+          toastClassName={ "bg-zinc-900 border-2 border-zinc-700 rounded-md text-white shadow-brutal-sm font-medium font-sans"}
+        />
         </Providers>
       </body>
     </html>

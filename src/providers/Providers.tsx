@@ -1,33 +1,34 @@
-'use client'
+"use client";
 
-import { PrivyProvider } from '@privy-io/react-auth'
-import { WagmiProvider } from 'wagmi'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { wagmiConfig, mantleSepolia } from '@/config/chains'
-import { ReactNode, useState } from 'react'
+import { PrivyProvider } from "@privy-io/react-auth";
+import { WagmiProvider } from "@privy-io/wagmi";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { wagmiConfig, mantleSepolia } from "@/config/chains";
+import { ReactNode, useState } from "react";
 
 interface ProvidersProps {
-  children: ReactNode
+  children: ReactNode;
 }
 
 export function Providers({ children }: ProvidersProps) {
   // Create QueryClient instance lazily to avoid React 19 hydration issues
-  const [queryClient] = useState(() => new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 60 * 1000, // 1 minute
-      },
-    },
-  }))
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 60 * 1000, // 1 minute
+          },
+        },
+      })
+  );
 
   // Get Privy app ID from environment variable
-  const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID || 'placeholder'
+  const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID || "placeholder";
 
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <PrivyProvider
-          appId={privyAppId}
+    <PrivyProvider
+       appId={privyAppId}
           config={{
             loginMethods: ['wallet'],
             appearance: {
@@ -37,17 +38,22 @@ export function Providers({ children }: ProvidersProps) {
               showWalletLoginFirst: true,
             },
             embeddedWallets: {
-              createOnLogin: 'all-users',
-              requireUserPasswordOnCreate: false,
+              // createOnLogin: 'all-users',
+              // requireUserPasswordOnCreate: false,
+              createOnLogin: 'users-without-wallets',
+              requireUserPasswordOnCreate: true,
+              showWalletUIs: true
             },
             defaultChain: mantleSepolia,
             supportedChains: [mantleSepolia],
-            walletConnectCloudProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,
+            walletConnectCloudProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID, 
           }}
-        >
+    >
+      <QueryClientProvider client={queryClient}>
+        <WagmiProvider config={wagmiConfig}>
           {children}
-        </PrivyProvider>
+        </WagmiProvider>
       </QueryClientProvider>
-    </WagmiProvider>
-  )
+    </PrivyProvider>
+  );
 }

@@ -20,6 +20,7 @@ export interface GameState {
   clientSeed?: string
   serverSeedHash?: string
   potentialWin: number
+  actualPayout?: number
 }
 
 export interface LeaderboardEntry {

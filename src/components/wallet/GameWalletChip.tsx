@@ -8,6 +8,7 @@ import { useAccount, useWriteContract } from 'wagmi'
 import { mantleSepolia } from '@/config/chains'
 import { AddFundsModal } from './AddFundsModal'
 import { WithdrawModal } from './WithdrawModal'
+import { useWallets } from '@privy-io/react-auth'
 
 // Create a public client for reading balance
 const publicClient = createPublicClient({
@@ -18,10 +19,14 @@ const publicClient = createPublicClient({
 export function GameWalletChip() {
   const { address, isConnected } = useAccount()
   const { writeContractAsync } = useWriteContract()
+  const { wallets } = useWallets()
   const [balance, setBalance] = useState<bigint>(BigInt(0))
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isAddFundsOpen, setIsAddFundsOpen] = useState(false)
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false)
+
+  // Get embedded wallet for transfers
+  const embeddedWallet = wallets.find(wallet => wallet.walletClientType === 'privy')
 
   // Fetch balance
   const fetchBalance = async () => {
@@ -52,13 +57,31 @@ export function GameWalletChip() {
     setTimeout(() => setIsRefreshing(false), 500)
   }
 
-  // Handle withdrawal transaction
+  // Handle withdrawal transaction using Privy
   const handleWithdraw = async (toAddress: Address, amount: bigint) => {
     if (!address) throw new Error('Wallet not connected')
+    if (!embeddedWallet) throw new Error('Embedded wallet not available')
     
-    // For now, just show a message - withdrawal needs contract integration
-    console.log('Withdrawal requested:', { toAddress, amount: amount.toString() })
-    alert('Withdrawal functionality requires contract integration')
+    try {
+      console.log('Initiating transfer:', { toAddress, amount: amount.toString() })
+      
+      // Use Privy embedded wallet to send transaction
+      const walletClient = await embeddedWallet.getEthereumProvider()
+      
+      const txHash = await walletClient.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          to: toAddress,
+          value: amount.toString(),
+        }],
+      })
+      
+      console.log('Transfer initiated:', txHash)
+      return txHash
+    } catch (error) {
+      console.error('Transfer failed:', error)
+      throw error
+    }
   }
 
   if (!isConnected || !address) {

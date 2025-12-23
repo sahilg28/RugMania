@@ -1,11 +1,12 @@
 "use client";
 
 import React from "react";
-import { useAccount, useConnection, useReadContract, useReadContracts, useWriteContract } from "wagmi";
+import { useAccount, useReadContract, useReadContracts, useWriteContract, useWatchContractEvent } from "wagmi";
 import { useWallets } from "@privy-io/react-auth";
 import { useSetActiveWallet } from "@privy-io/wagmi";
 import { CONTRACT_ADDRESSES } from "@/config/chains";
 import ABI from "@/lib/contract/abi.json";
+import { formatEther } from "viem";
 
 export function useRugMania() {
   const { address, connector } = useAccount();
@@ -55,6 +56,11 @@ export function useRugMania() {
         abi: ABI,
         functionName: "getMaxBet",
       },
+      {
+        address: RUG_MANIA_ADDRESS,
+        abi: ABI,
+        functionName: "MAX_LEVELS",
+      },
     ],
     query: { enabled: !!contractAddress },
   });
@@ -63,7 +69,7 @@ export function useRugMania() {
   const game = reads?.[0]?.result as any | undefined;
   const currentPayout = reads?.[1]?.result as bigint | undefined;
   const maxBet = reads?.[2]?.result as bigint | undefined;
-
+  const maxLevels = reads?.[3]?.result as bigint | undefined;
 
   // Write helpers – all same ABI/address
   async function placeBet(
@@ -84,7 +90,22 @@ export function useRugMania() {
       console.log("Attempting placeBet with connector:", connector);
       console.log("Connector has getChainId:", typeof connector.getChainId === 'function');
       console.log("Using embedded wallet address:", contractAddress);
+      console.log("Bet parameters:", {
+        doors,
+        clientSeed,
+        serverSeedHash,
+        valueWei: valueWei.toString(),
+        valueEth: parseFloat(formatEther(valueWei)).toFixed(6)
+      });
+      console.log("Current maxBet:", maxBet ? parseFloat(formatEther(maxBet)).toFixed(6) : 'unknown');
+      console.log("Current game state:", game);
       
+      // Validate bet amount against maxBet
+      if (maxBet && valueWei > maxBet) {
+        throw new Error(`Bet amount ${parseFloat(formatEther(valueWei)).toFixed(6)} MNT exceeds maximum bet ${parseFloat(formatEther(maxBet)).toFixed(6)} MNT`);
+      }
+      
+
       return await writeContractAsync({
         address: RUG_MANIA_ADDRESS,
         abi: ABI,
@@ -92,9 +113,36 @@ export function useRugMania() {
         args: [doors, clientSeed, serverSeedHash],
         value: valueWei,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.log(typeof error);
       console.error("Error in placeBet:", error);
+      
+      // Handle specific contract errors
+      if (error.message?.includes('HouseRiskTooHigh')) {
+        const match = error.message.match(/HouseRiskTooHigh\(uint256 maxPayout, uint256 availableBankroll\)\s*\((\d+),\s*(\d+)\)/);
+        if (match) {
+          const maxPayout = parseFloat(formatEther(BigInt(match[1]))).toFixed(4);
+          const availableBankroll = parseFloat(formatEther(BigInt(match[2]))).toFixed(4);
+          throw new Error(`House risk too high. Potential payout ${maxPayout} MNT exceeds available bankroll ${availableBankroll} MNT. Please try a lower bet amount, decrease the difficulty, or wait for more house liquidity.`);
+        }
+      }
+      
+      if (error.message?.includes('BetBelowMinimum')) {
+        throw new Error("Bet amount is below the minimum required (0.1 MNT).");
+      }
+      
+      if (error.message?.includes('BetTooHigh')) {
+        throw new Error("Bet amount exceeds the maximum allowed.");
+      }
+      
+      if (error.message?.includes('GameAlreadyActive')) {
+        throw new Error("You already have an active game. Please cash out or complete your current game before starting a new one.");
+      }
+      
+      if (error.message?.includes('NoHouseLiquidity')) {
+        throw new Error("The house does not have enough liquidity to accept your bet. Please try again later.");
+      }
+      
       throw error;
     }
   }
@@ -125,6 +173,7 @@ export function useRugMania() {
     game,
     currentPayout,
     maxBet,
+    maxLevels,
     contractAddress,
     // writes
     placeBet,

@@ -1,6 +1,5 @@
 import { defineChain } from 'viem'
-import { http } from 'wagmi'
-import { createConfig } from '@privy-io/wagmi'
+import { http, fallback, createConfig } from 'wagmi'
 
 // Mantle Sepolia Testnet - Complete config for Privy compatibility
 export const mantleSepolia = defineChain({
@@ -14,11 +13,19 @@ export const mantleSepolia = defineChain({
   },
   rpcUrls: {
     default: { 
-      http: ['https://rpc.sepolia.mantle.xyz'],
+      http: [
+        'https://rpc.sepolia.mantle.xyz',
+        'https://mantle-sepolia.blockpi.network/v1/rpc/public',
+        'https://rpc.ankr.com/mantle_sepolia'
+      ],
       webSocket: ['wss://rpc.sepolia.mantle.xyz']
     },
     public: { 
-      http: ['https://rpc.sepolia.mantle.xyz'],
+      http: [
+        'https://rpc.sepolia.mantle.xyz',
+        'https://mantle-sepolia.blockpi.network/v1/rpc/public',
+        'https://rpc.ankr.com/mantle_sepolia'
+      ],
       webSocket: ['wss://rpc.sepolia.mantle.xyz']
     },
   },
@@ -42,7 +49,23 @@ export const mantleSepolia = defineChain({
 export const wagmiConfig = createConfig({
   chains: [mantleSepolia],
   transports: {
-    [mantleSepolia.id]: http(),
+    [mantleSepolia.id]: fallback([
+      http('https://rpc.sepolia.mantle.xyz', {
+        retryCount: 3,
+        retryDelay: 1000,
+        timeout: 30000,
+      }),
+      http('https://mantle-sepolia.blockpi.network/v1/rpc/public', {
+        retryCount: 1,
+        retryDelay: 5000,
+        timeout: 10000,
+      }),
+      http('https://rpc.ankr.com/mantle_sepolia', {
+        retryCount: 1,
+        retryDelay: 5000,
+        timeout: 10000,
+      }),
+    ]),
   },
 })
 

@@ -1,184 +1,293 @@
 "use client";
 
 import React from "react";
-import { useAccount, useReadContract, useReadContracts, useWriteContract, useWatchContractEvent } from "wagmi";
+import { useAccount, useReadContracts } from "wagmi";
 import { useWallets } from "@privy-io/react-auth";
 import { useSetActiveWallet } from "@privy-io/wagmi";
 import { CONTRACT_ADDRESSES } from "@/config/chains";
 import ABI from "@/lib/contract/abi.json";
-import { formatEther } from "viem";
+import { formatEther, encodeFunctionData, keccak256, toHex, createPublicClient, http } from "viem";
+import { mantleSepolia } from "@/config/chains";
+
+// Public client for waiting for transaction receipts
+const publicClient = createPublicClient({
+  chain: mantleSepolia,
+  transport: http('https://rpc.sepolia.mantle.xyz'),
+});
+
+const CONTRACT_ERRORS: Record<string, string> = {
+  GameAlreadyActive: "You already have an active game. Cash out or finish it first.",
+  HouseRiskTooHigh: "House cannot cover potential payout. Try a lower bet.",
+  NoHouseLiquidity: "House has no funds. Please try again later.",
+  BetBelowMinimum: "Minimum bet is 0.1 MNT.",
+  BetTooHigh: "Bet exceeds maximum allowed.",
+  InvalidDoors: "Invalid difficulty selected.",
+  InvalidSeed: "Invalid seed provided.",
+  NoActiveGame: "No active game found. Please place a bet first.",
+  NothingToCashOut: "You need to win at least one level to cash out.",
+  InsufficientHouseBalance: "House cannot pay your winnings right now.",
+  InvalidServerSeed: "Server seed verification failed. Seeds don't match.",
+  InvalidDoorIndex: "Invalid door selected.",
+  MaxLevelReached: "You've reached the maximum level!",
+  TranferFailed: "Transfer failed. Please try again.",
+};
+
+function decodeContractError(error: any): string {
+  const msg = error?.message || error?.toString() || "";
+  for (const [errorName, message] of Object.entries(CONTRACT_ERRORS)) {
+    if (msg.includes(errorName)) return message;
+  }
+  if (msg.includes("insufficient funds")) return "Insufficient wallet balance for this bet.";
+  if (msg.includes("user rejected") || msg.includes("User rejected")) return "Transaction was cancelled.";
+  if (msg.includes("nonce")) return "Transaction conflict. Please try again.";
+  if (msg.includes("execution reverted")) return "Transaction rejected by contract. Check your bet amount.";
+  return "Transaction failed. Please try again.";
+}
 
 export function useRugMania() {
-  const { address, connector } = useAccount();
-  // const connection = useConnection();
+  const { address } = useAccount();
   const { wallets } = useWallets();
   const { setActiveWallet } = useSetActiveWallet();
-  const { writeContractAsync } = useWriteContract();
   const RUG_MANIA_ADDRESS = CONTRACT_ADDRESSES.doorRunner;
 
-  // Get internal Privy embedded wallet address
   const embeddedWallet = wallets.find(wallet => wallet.walletClientType === 'privy');
-  const embeddedAddress = embeddedWallet?.address;
+  const embeddedAddress = embeddedWallet?.address as `0x${string}` | undefined;
 
-  // Set embedded wallet as active if not already active
   React.useEffect(() => {
     if (embeddedWallet && address !== embeddedAddress) {
       setActiveWallet(embeddedWallet);
     }
   }, [embeddedWallet, address, embeddedAddress, setActiveWallet]);
 
-  // Use embedded address for contract interactions
   const contractAddress = embeddedAddress || address || "0x0000000000000000000000000000000000000000";
 
-  // Debug: Log what connector we're getting
-  // console.log("useRugMania - connector:", connector);
-  // console.log("useRugMania - connector methods:", connector ? Object.getOwnPropertyNames(connector) : 'null');
-  // // console.log("useRugMania - connection:", connection);
-  // console.log("useRugMania - embedded wallet address:", embeddedAddress);
-  // console.log("useRugMania - contract address:", contractAddress);
-
-  const { data: reads } = useReadContracts({
+  const { data: reads, refetch: refetchContractState } = useReadContracts({
     contracts: [
-      {
-        address: RUG_MANIA_ADDRESS,
-        abi: ABI,
-        functionName: "getGame",
-        args: [contractAddress ?? "0x0000000000000000000000000000000000000000"],
-      },
-      {
-        address: RUG_MANIA_ADDRESS,
-        abi: ABI,
-        functionName: "getCurrentPayout",
-        args: [contractAddress ?? "0x0000000000000000000000000000000000000000"],
-      },
-      {
-        address: RUG_MANIA_ADDRESS,
-        abi: ABI,
-        functionName: "getMaxBet",
-      },
-      {
-        address: RUG_MANIA_ADDRESS,
-        abi: ABI,
-        functionName: "MAX_LEVELS",
-      },
+      { address: RUG_MANIA_ADDRESS, abi: ABI, functionName: "getGame", args: [contractAddress] },
+      { address: RUG_MANIA_ADDRESS, abi: ABI, functionName: "getCurrentPayout", args: [contractAddress] },
+      { address: RUG_MANIA_ADDRESS, abi: ABI, functionName: "getMaxBet" },
+      { address: RUG_MANIA_ADDRESS, abi: ABI, functionName: "MAX_LEVELS" },
+      { address: RUG_MANIA_ADDRESS, abi: ABI, functionName: "houseBalance" },
+      { address: RUG_MANIA_ADDRESS, abi: ABI, functionName: "MIN_BET" },
+      { address: RUG_MANIA_ADDRESS, abi: ABI, functionName: "HOUSE_EDGE_PERCENT" },
     ],
-    query: { enabled: !!contractAddress },
+    query: { enabled: !!contractAddress && contractAddress !== "0x0000000000000000000000000000000000000000" },
   });
-
 
   const game = reads?.[0]?.result as any | undefined;
   const currentPayout = reads?.[1]?.result as bigint | undefined;
   const maxBet = reads?.[2]?.result as bigint | undefined;
   const maxLevels = reads?.[3]?.result as bigint | undefined;
+  const houseBalance = reads?.[4]?.result as bigint | undefined;
+  const minBet = reads?.[5]?.result as bigint | undefined;
+  const houseEdgePercent = reads?.[6]?.result as bigint | undefined;
+  const hasActiveGame = game?.isActive === true;
 
-  // Write helpers – all same ABI/address
-  async function placeBet(
-    doors: number,
-    clientSeed: `0x${string}`,
-    serverSeedHash: `0x${string}`,
-    valueWei: bigint
-  ) {
+  // Generate deterministic seeds from wallet signature
+  async function generateDeterministicSeeds(gameNonce: number): Promise<{ 
+    serverSeed: `0x${string}`, 
+    clientSeed: `0x${string}`, 
+    serverSeedHash: `0x${string}` 
+  }> {
+    if (!embeddedWallet) throw new Error("Wallet not connected");
+    const provider = await embeddedWallet.getEthereumProvider();
+    
+    // Generate unique seeds using different messages
+    const serverMessage = `RugMania Server Seed - Contract: ${RUG_MANIA_ADDRESS} - Nonce: ${gameNonce} - Type: server`;
+    const clientMessage = `RugMania Client Seed - Contract: ${RUG_MANIA_ADDRESS} - Nonce: ${gameNonce} - Type: client`;
+    
+    // Sign for server seed
+    const serverSignature = await provider.request({
+      method: 'personal_sign',
+      params: [toHex(serverMessage), embeddedAddress],
+    }) as string;
+    
+    // Sign for client seed (different message = different signature)
+    const clientSignature = await provider.request({
+      method: 'personal_sign',
+      params: [toHex(clientMessage), embeddedAddress],
+    }) as string;
+    
+    const serverSeed = keccak256(serverSignature as `0x${string}`);
+    const clientSeed = keccak256(clientSignature as `0x${string}`);
+    const serverSeedHash = keccak256(serverSeed);
+    
+    return { serverSeed, clientSeed, serverSeedHash };
+  }
+
+  // Recover seeds for an existing game using the stored serverSeedHash
+  async function recoverSeeds(storedServerSeedHash: string, maxAttempts: number = 100): Promise<{ 
+    serverSeed: `0x${string}`, 
+    clientSeed: `0x${string}` 
+  } | null> {
+    if (!embeddedWallet) throw new Error("Wallet not connected");
+    const provider = await embeddedWallet.getEthereumProvider();
+    
+    for (let nonce = 0; nonce < maxAttempts; nonce++) {
+      const serverMessage = `RugMania Server Seed - Contract: ${RUG_MANIA_ADDRESS} - Nonce: ${nonce} - Type: server`;
+      const clientMessage = `RugMania Client Seed - Contract: ${RUG_MANIA_ADDRESS} - Nonce: ${nonce} - Type: client`;
+      
+      try {
+        const serverSignature = await provider.request({
+          method: 'personal_sign',
+          params: [toHex(serverMessage), embeddedAddress],
+        }) as string;
+        
+        const serverSeed = keccak256(serverSignature as `0x${string}`);
+        const serverSeedHash = keccak256(serverSeed);
+        
+        if (serverSeedHash === storedServerSeedHash) {
+          const clientSignature = await provider.request({
+            method: 'personal_sign',
+            params: [toHex(clientMessage), embeddedAddress],
+          }) as string;
+          const clientSeed = keccak256(clientSignature as `0x${string}`);
+          return { serverSeed, clientSeed };
+        }
+      } catch (e) {
+        console.error("Error recovering seed at nonce", nonce, e);
+      }
+    }
+    return null;
+  }
+
+  function getNextGameNonce(): number {
+    const key = `rugmania_nonce_${embeddedAddress}`;
+    return parseInt(localStorage.getItem(key) || '0', 10);
+  }
+
+  function incrementGameNonce(): void {
+    const key = `rugmania_nonce_${embeddedAddress}`;
+    const current = parseInt(localStorage.getItem(key) || '0', 10);
+    localStorage.setItem(key, (current + 1).toString());
+  }
+
+  async function sendTransaction(data: `0x${string}`, value?: bigint): Promise<string> {
+    if (!embeddedWallet) throw new Error("Wallet not connected. Please connect first.");
     try {
-      if (!contractAddress) {
-        throw new Error("Please connect your wallet first");
-      }
+      const provider = await embeddedWallet.getEthereumProvider();
       
-      if (!connector) {
-        throw new Error("Wallet connector not available. Please make sure your wallet is properly connected.");
-      }
-      
-      console.log("Attempting placeBet with connector:", connector);
-      console.log("Connector has getChainId:", typeof connector.getChainId === 'function');
-      console.log("Using embedded wallet address:", contractAddress);
-      console.log("Bet parameters:", {
-        doors,
-        clientSeed,
-        serverSeedHash,
-        valueWei: valueWei.toString(),
-        valueEth: parseFloat(formatEther(valueWei)).toFixed(6)
-      });
-      console.log("Current maxBet:", maxBet ? parseFloat(formatEther(maxBet)).toFixed(6) : 'unknown');
-      console.log("Current game state:", game);
-      
-      // Validate bet amount against maxBet
-      if (maxBet && valueWei > maxBet) {
-        throw new Error(`Bet amount ${parseFloat(formatEther(valueWei)).toFixed(6)} MNT exceeds maximum bet ${parseFloat(formatEther(maxBet)).toFixed(6)} MNT`);
-      }
-      
-
-      return await writeContractAsync({
-        address: RUG_MANIA_ADDRESS,
-        abi: ABI,
-        functionName: "placeBet",
-        args: [doors, clientSeed, serverSeedHash],
-        value: valueWei,
-      });
-    } catch (error: any) {
-      console.log(typeof error);
-      console.error("Error in placeBet:", error);
-      
-      // Handle specific contract errors
-      if (error.message?.includes('HouseRiskTooHigh')) {
-        const match = error.message.match(/HouseRiskTooHigh\(uint256 maxPayout, uint256 availableBankroll\)\s*\((\d+),\s*(\d+)\)/);
-        if (match) {
-          const maxPayout = parseFloat(formatEther(BigInt(match[1]))).toFixed(4);
-          const availableBankroll = parseFloat(formatEther(BigInt(match[2]))).toFixed(4);
-          throw new Error(`House risk too high. Potential payout ${maxPayout} MNT exceeds available bankroll ${availableBankroll} MNT. Please try a lower bet amount, decrease the difficulty, or wait for more house liquidity.`);
+      // Switch to correct chain
+      try {
+        await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x138b' }] });
+      } catch (switchError: any) {
+        if (switchError.code === 4902) {
+          await provider.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: '0x138b',
+              chainName: 'Mantle Sepolia Testnet',
+              nativeCurrency: { name: 'MNT', symbol: 'MNT', decimals: 18 },
+              rpcUrls: ['https://rpc.sepolia.mantle.xyz'],
+              blockExplorerUrls: ['https://sepolia.mantlescan.xyz'],
+            }],
+          });
+        } else {
+          throw switchError;
         }
       }
       
-      if (error.message?.includes('BetBelowMinimum')) {
-        throw new Error("Bet amount is below the minimum required (0.1 MNT).");
+      // Send transaction
+      const txHash = await provider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: embeddedAddress,
+          to: RUG_MANIA_ADDRESS,
+          data: data,
+          value: value ? `0x${value.toString(16)}` : '0x0',
+        }],
+      });
+      
+      console.log("Transaction sent:", txHash);
+      
+      // Wait for transaction to be mined
+      const receipt = await publicClient.waitForTransactionReceipt({ 
+        hash: txHash as `0x${string}`,
+        timeout: 60_000, // 60 second timeout
+      });
+      
+      console.log("Transaction confirmed:", receipt.status);
+      
+      if (receipt.status === 'reverted') {
+        throw new Error("Transaction reverted on-chain. Check contract conditions.");
       }
       
-      if (error.message?.includes('BetTooHigh')) {
-        throw new Error("Bet amount exceeds the maximum allowed.");
-      }
-      
-      if (error.message?.includes('GameAlreadyActive')) {
-        throw new Error("You already have an active game. Please cash out or complete your current game before starting a new one.");
-      }
-      
-      if (error.message?.includes('NoHouseLiquidity')) {
-        throw new Error("The house does not have enough liquidity to accept your bet. Please try again later.");
-      }
-      
-      throw error;
+      return txHash as string;
+    } catch (error: any) {
+      console.error("Transaction error:", error);
+      throw new Error(decodeContractError(error));
     }
   }
 
-  async function selectDoor(
-    doorIndex: number,
-    serverSeed: `0x${string}`
-  ) {
-    return writeContractAsync({
-      address: RUG_MANIA_ADDRESS,
-      abi: ABI,
-      functionName: "selectDoor",
-      args: [doorIndex, serverSeed],
-    });
+  function validateBet(valueWei: bigint, doors: number): { valid: boolean; error?: string } {
+    if (!embeddedAddress) return { valid: false, error: "Please connect your wallet first." };
+    if (hasActiveGame) return { valid: false, error: "You already have an active game. Cash out or finish it first." };
+    if (minBet && valueWei < minBet) return { valid: false, error: `Minimum bet is ${formatEther(minBet)} MNT.` };
+    if (maxBet && valueWei > maxBet) return { valid: false, error: `Maximum bet is ${formatEther(maxBet)} MNT.` };
+    if (!houseBalance || houseBalance === BigInt(0)) return { valid: false, error: "House has no funds. Please try again later." };
+    if (![3, 4, 5].includes(doors)) return { valid: false, error: "Invalid difficulty." };
+    return { valid: true };
+  }
+
+  async function placeBet(doors: number, clientSeed: `0x${string}`, serverSeedHash: `0x${string}`, valueWei: bigint) {
+    const validation = validateBet(valueWei, doors);
+    if (!validation.valid) throw new Error(validation.error);
+    
+    console.log("=== CONTRACT placeBet ===");
+    console.log("Doors:", doors);
+    console.log("Client seed:", clientSeed);
+    console.log("Server seed hash:", serverSeedHash);
+    console.log("Value (wei):", valueWei.toString());
+    console.log("Value (MNT):", formatEther(valueWei));
+    
+    const data = encodeFunctionData({ abi: ABI, functionName: "placeBet", args: [doors, clientSeed, serverSeedHash] });
+    const txHash = await sendTransaction(data, valueWei);
+    await refetchContractState();
+    return txHash;
+  }
+
+  async function selectDoor(doorIndex: number, serverSeed: `0x${string}`) {
+    // Verify game is active before attempting
+    if (!hasActiveGame) {
+      throw new Error("No active game. Please place a bet first.");
+    }
+    
+    console.log("=== CONTRACT selectDoor ===");
+    console.log("Door index:", doorIndex);
+    console.log("Server seed:", serverSeed);
+    console.log("Server seed length:", serverSeed.length);
+    console.log("Server seed type:", typeof serverSeed);
+    
+    // Verify serverSeed format
+    if (!serverSeed.startsWith('0x') || serverSeed.length !== 66) {
+      throw new Error(`Invalid serverSeed format: ${serverSeed.substring(0, 20)}... (length: ${serverSeed.length})`);
+    }
+    
+    // Log what hash the contract will compute
+    const expectedHash = keccak256(serverSeed);
+    console.log("Expected hash (what contract will compute):", expectedHash);
+    console.log("Stored hash on contract:", game?.serverSeedHash);
+    
+    const data = encodeFunctionData({ abi: ABI, functionName: "selectDoor", args: [doorIndex, serverSeed] });
+    console.log("Encoded function data:", data);
+    
+    const txHash = await sendTransaction(data);
+    await refetchContractState();
+    return txHash;
   }
 
   async function cashOut() {
-    return writeContractAsync({
-      address: RUG_MANIA_ADDRESS,
-      abi: ABI,
-      functionName: "cashOut",
-      args: [],
-    });
+    if (!hasActiveGame) throw new Error("No active game to cash out.");
+    const data = encodeFunctionData({ abi: ABI, functionName: "cashOut", args: [] });
+    const txHash = await sendTransaction(data);
+    setTimeout(() => refetchContractState(), 2000);
+    return txHash;
   }
 
   return {
-    // reads
-    game,
-    currentPayout,
-    maxBet,
-    maxLevels,
-    contractAddress,
-    // writes
-    placeBet,
-    selectDoor,
-    cashOut,
+    game, currentPayout, maxBet, maxLevels, houseBalance, minBet, houseEdgePercent,
+    hasActiveGame, contractAddress: embeddedAddress, isWalletConnected: !!embeddedWallet,
+    placeBet, selectDoor, cashOut, refetchContractState, validateBet,
+    generateDeterministicSeeds, recoverSeeds, getNextGameNonce, incrementGameNonce,
   };
-
 }

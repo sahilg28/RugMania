@@ -17,7 +17,7 @@ export function RugDoor({ door, onClick, disabled = false }: RugDoorProps) {
         // Rugged door - only skull
         return (
           <div className="flex items-center justify-center h-full">
-            <span className="text-4xl">💀</span>
+            <span className="text-2xl sm:text-3xl md:text-4xl">💀</span>
           </div>
         )
       }
@@ -28,9 +28,9 @@ export function RugDoor({ door, onClick, disabled = false }: RugDoorProps) {
     // Unrevealed door - WIN! OR RUG! on three lines
     return (
       <div className="flex flex-col items-center justify-center h-full">
-        <span className="text-white font-black text-sm tracking-wide">WIN!</span>
-        <span className="text-white/70 font-bold text-xs">OR</span>
-        <span className="text-white font-black text-sm tracking-wide">RUG!</span>
+        <span className="text-white font-black text-[10px] sm:text-sm tracking-wide">WIN!</span>
+        <span className="text-white/70 font-bold text-[8px] sm:text-xs">OR</span>
+        <span className="text-white font-black text-[10px] sm:text-sm tracking-wide">RUG!</span>
       </div>
     )
   }
@@ -40,8 +40,8 @@ export function RugDoor({ door, onClick, disabled = false }: RugDoorProps) {
       onClick={onClick}
       disabled={disabled || door.isRevealed}
       className={cn(
-        "relative w-[70px] h-[100px] sm:w-[80px] sm:h-[115px]",
-        "rounded-t-[30px] rounded-b-md",
+        "relative w-[52px] h-[75px] sm:w-[70px] sm:h-[100px] md:w-[80px] md:h-[115px]",
+        "rounded-t-[20px] sm:rounded-t-[30px] rounded-b-md",
         "border-2 transition-all duration-300",
         door.isRevealed
           ? door.isRug

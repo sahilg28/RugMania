@@ -1,12 +1,21 @@
 'use client'
 
-export function Footer() {
+interface FooterProps {
+  onOpenHowItWorks?: () => void
+}
+
+export function Footer({ onOpenHowItWorks }: FooterProps) {
   return (
     <footer className="border-t border-zinc-800/30 mt-auto" style={{ backgroundColor: 'var(--color-bg-dark)' }}>
       <div className="max-w-7xl mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <nav className="flex items-center gap-6">
-            <a href="#" className="text-zinc-400 font-semibold text-sm hover:text-main transition-colors">How It Works</a>
+            <button 
+              onClick={onOpenHowItWorks} 
+              className="text-zinc-400 font-semibold text-sm hover:text-main transition-colors"
+            >
+              How It Works
+            </button>
             <a href="#" className="text-zinc-400 font-semibold text-sm hover:text-main transition-colors">Docs</a>
           </nav>
           <a href="https://x.com" target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:text-white transition-colors">

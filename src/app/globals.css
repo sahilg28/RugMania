@@ -24,23 +24,34 @@
     --ring: 0 0% 0%;
     --radius: 6px;
     
-    /* === PRIMARY ACCENT (Lime Green) === */
-    --main: 82 85% 55%;
+    /* === PRIMARY ACCENT (Lime - original) === */
+    --main: 84 81% 44%;
     --main-foreground: 0 0% 0%;
     
     /* === GAME DESIGN SYSTEM === */
     --color-bg-dark: #0a0a0f;
-    --color-bg-card: #1a1a2e;
-    --color-bg-elevated: #252540;
-    --color-border-subtle: #2a2a3e;
+    --color-bg-card: #111116;
+    --color-bg-elevated: #1a1a22;
+    --color-border-subtle: #27272a;
     
-    /* Accent Colors */
+    /* Primary Accent - Lime Green */
+    --color-primary: #a3e635;
+    --color-primary-hover: #bef264;
+    --color-primary-dark: #84cc16;
+    
+    /* Secondary - Purple (doors, game elements) */
     --color-purple: #8B5CF6;
     --color-purple-dark: #6d28d9;
-    --color-lime: #a3e635;
-    --color-yellow: #FACC15;
+    --color-purple-light: #A78BFA;
+    
+    /* Semantic Colors */
     --color-success: #22C55E;
     --color-danger: #EF4444;
+    --color-warning: #F97316;
+    
+    /* Legacy (keeping for compatibility) */
+    --color-lime: #a3e635;
+    --color-yellow: #FACC15;
     
     /* Text */
     --color-text-primary: #FFFFFF;
@@ -61,8 +72,8 @@
 
   .bg-grid {
     background-image: 
-      linear-gradient(rgba(163, 230, 53, 0.06) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(163, 230, 53, 0.06) 1px, transparent 1px);
+      linear-gradient(rgba(163, 230, 53, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(163, 230, 53, 0.03) 1px, transparent 1px);
     background-size: 40px 40px;
   }
 }
@@ -71,18 +82,18 @@
   .game-card {
     @apply border-2 rounded-xl;
     background-color: var(--color-bg-card);
-    border-color: var(--color-purple);
+    border-color: var(--color-primary);
   }
 
   .game-input {
     @apply w-full px-4 py-2.5 text-sm font-medium rounded-md outline-none transition-colors;
     background-color: var(--color-bg-elevated);
-    border: 1px solid var(--color-border-subtle);
+    border: 2px solid var(--color-border-subtle);
     color: white;
   }
 
   .game-input:focus {
-    border-color: var(--color-purple);
+    border-color: var(--color-primary);
   }
 
   .game-input::placeholder {
@@ -101,9 +112,12 @@
   .text-danger { color: var(--color-danger); }
   .text-muted { color: var(--color-text-muted); }
   .text-secondary { color: var(--color-text-secondary); }
+  .text-primary-accent { color: var(--color-primary); }
   .bg-game-card { background-color: var(--color-bg-card); }
   .bg-game-elevated { background-color: var(--color-bg-elevated); }
-  .bg-lime { background-color: var(--color-lime); }
+  .bg-primary { background-color: var(--color-primary); }
+  .bg-lime { background-color: var(--color-primary); }
   .border-purple { border-color: var(--color-purple); }
   .border-subtle { border-color: var(--color-border-subtle); }
+  .border-primary { border-color: var(--color-primary); }
 }

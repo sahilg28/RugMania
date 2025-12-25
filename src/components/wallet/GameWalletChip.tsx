@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Wallet, Plus, ArrowDownToLine } from 'lucide-react'
 import { createPublicClient, http, formatEther, type Address } from 'viem'
-import { useAccount, useWriteContract } from 'wagmi'
 import { mantleSepolia } from '@/config/chains'
 import { AddFundsModal } from './AddFundsModal'
 import { WithdrawModal } from './WithdrawModal'
@@ -17,16 +16,16 @@ const publicClient = createPublicClient({
 })
 
 export function GameWalletChip() {
-  const { address, isConnected } = useAccount()
-  const { writeContractAsync } = useWriteContract()
-  const { wallets } = useWallets()
+  const { wallets, ready } = useWallets()
   const [balance, setBalance] = useState<bigint>(BigInt(0))
+  const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isAddFundsOpen, setIsAddFundsOpen] = useState(false)
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false)
 
-  // Get embedded wallet for transfers
+  // Get embedded wallet
   const embeddedWallet = wallets.find(wallet => wallet.walletClientType === 'privy')
+  const address = embeddedWallet?.address as Address | undefined
 
   // Fetch balance
   const fetchBalance = async () => {
@@ -37,12 +36,15 @@ export function GameWalletChip() {
       setBalance(bal)
     } catch (error) {
       console.error('Failed to fetch balance:', error)
+    } finally {
+      setIsLoading(false)
     }
   }
 
   // Initial fetch and polling
   useEffect(() => {
     if (address) {
+      setIsLoading(true)
       fetchBalance()
       // Poll every 10 seconds
       const interval = setInterval(fetchBalance, 10000)
@@ -84,11 +86,20 @@ export function GameWalletChip() {
     }
   }
 
-  if (!isConnected || !address) {
+  if (!ready) {
     return (
       <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-zinc-700 bg-zinc-900">
         <Wallet className="w-4 h-4 text-zinc-500 animate-pulse" />
         <span className="text-zinc-500 font-semibold text-sm">Loading...</span>
+      </div>
+    )
+  }
+
+  if (!embeddedWallet || !address) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-zinc-700 bg-zinc-900">
+        <Wallet className="w-4 h-4 text-zinc-500" />
+        <span className="text-zinc-500 font-semibold text-sm">No wallet</span>
       </div>
     )
   }
@@ -98,7 +109,7 @@ export function GameWalletChip() {
   return (
     <>
       <motion.div 
-        className="flex items-center gap-2"
+        className="flex items-center gap-1 sm:gap-2"
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.1 }}
@@ -106,33 +117,37 @@ export function GameWalletChip() {
         {/* Balance Display */}
         <button
           onClick={handleRefresh}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-md border border-zinc-700 bg-zinc-900 hover:border-main transition-colors ${
+          className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-md border border-zinc-700 bg-zinc-900 hover:border-main transition-colors ${
             isRefreshing ? 'animate-pulse' : ''
           }`}
           title="Click to refresh balance"
         >
-          <Wallet className="w-4 h-4 text-main" />
-          <span className="text-white font-semibold text-sm">
-            {balanceInMNT.toFixed(4)} MNT
-          </span>
+          <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-main" />
+          {isLoading ? (
+            <span className="w-12 sm:w-16 h-4 bg-zinc-700 animate-pulse rounded" />
+          ) : (
+            <span className="text-white font-semibold text-xs sm:text-sm">
+              {balanceInMNT.toFixed(2)} MNT
+            </span>
+          )}
         </button>
 
         {/* Add Funds Button */}
         <button
           onClick={() => setIsAddFundsOpen(true)}
           title="Add Funds"
-          className="w-9 h-9 flex items-center justify-center rounded-md bg-main border-2 border-black text-black hover:bg-lime-300 transition-colors shadow-brutal-sm"
+          className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-md bg-main border-2 border-black text-black hover:bg-lime-300 transition-colors shadow-brutal-sm"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </button>
 
         {/* Withdraw Button */}
         <button
           onClick={() => setIsWithdrawOpen(true)}
           title="Withdraw"
-          className="w-9 h-9 flex items-center justify-center rounded-md bg-main border-2 border-black text-black hover:bg-lime-300 transition-colors shadow-brutal-sm"
+          className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-md bg-main border-2 border-black text-black hover:bg-lime-300 transition-colors shadow-brutal-sm"
         >
-          <ArrowDownToLine className="w-4 h-4" />
+          <ArrowDownToLine className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </button>
       </motion.div>
 

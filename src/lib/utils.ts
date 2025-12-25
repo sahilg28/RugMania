@@ -35,3 +35,26 @@ export function generateRandomSeed(): `0x${string}` {
 
   return `0x${hex}`;
 }
+
+// Format balance to 2 decimal places
+export function formatBalance(value: number | bigint | string, decimals: number = 2): string {
+  const num = typeof value === 'bigint' ? Number(value) / 1e18 : Number(value);
+  return num.toFixed(decimals);
+}
+
+// Format multiplier (handles both raw and scaled values)
+export function formatMultiplier(value: number, isScaled: boolean = false): string {
+  const num = isScaled ? value / 1e18 : value;
+  return num.toFixed(2);
+}
+
+// Format MNT amount with symbol
+export function formatMNT(value: number | string, decimals: number = 2): string {
+  return `${Number(value).toFixed(decimals)} MNT`;
+}
+
+// Truncate address for display
+export function truncateAddress(address: string, chars: number = 4): string {
+  if (!address) return '';
+  return `${address.slice(0, chars + 2)}...${address.slice(-chars)}`;
+}

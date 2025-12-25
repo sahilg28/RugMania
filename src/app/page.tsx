@@ -45,24 +45,22 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-grid flex flex-col" style={{ backgroundColor: 'var(--color-bg-dark)' }}>
-      <Header />
+    <div className="h-screen bg-grid flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--color-bg-dark)' }}>
+      <Header isGame isLanding />
       
-      <main className="flex-1 pt-20 pb-6">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            {/* Game Preview + CTA - Stacked */}
-            <div className="lg:col-span-8 flex flex-col gap-4">
-              <div className="flex-1">
-                <GamePreview />
-              </div>
-              <CTASection onPlayDemo={handlePlayDemo} />
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-3 overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-full">
+          {/* Game Preview + CTA - Stacked */}
+          <div className="lg:col-span-8 flex flex-col gap-3 h-full">
+            <div className="flex-1 min-h-0">
+              <GamePreview />
             </div>
-            
-            {/* Leaderboard - Matches height */}
-            <div className="lg:col-span-4">
-              <Leaderboard animated />
-            </div>
+            <CTASection onPlayDemo={handlePlayDemo} />
+          </div>
+          
+          {/* Leaderboard - Matches height */}
+          <div className="lg:col-span-4 h-full">
+            <Leaderboard animated />
           </div>
         </div>
       </main>

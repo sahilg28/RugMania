@@ -12,8 +12,8 @@ export function CTASection({ onPlayDemo }: CTASectionProps) {
   const { login, ready } = usePrivy()
 
   return (
-    <div className="rounded-xl border-2 border-lime-400 bg-zinc-900 p-6 text-center">
-      <h2 className="text-white text-lg font-black mb-4 tracking-tight uppercase">
+    <div className="shrink-0 rounded-xl border-2 border-lime-400 bg-zinc-900 p-4 text-center">
+      <h2 className="text-white text-lg font-black mb-3 tracking-tight uppercase">
         How do you wanna start the game?
       </h2>
       

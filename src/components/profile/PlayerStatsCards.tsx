@@ -27,23 +27,14 @@ export function PlayerStatsCards({ address }: PlayerStatsCardsProps) {
       if (!address) return
       
       try {
-        // Fetch from leaderboard API which has player stats
-        const response = await fetch(`/api/leaderboard?address=${address}`)
+        const response = await fetch(`/api/player-stats?address=${address}`)
         if (response.ok) {
           const data = await response.json()
-          // Find this player in the data
-          const allPlayers = [...(data.weekly || []), ...(data.allTime || [])]
-          const player = allPlayers.find((p: any) => 
-            p.address?.toLowerCase() === address.toLowerCase()
-          )
-          
-          if (player) {
-            setStats({
-              totalGames: player.gamesPlayed || 0,
-              totalWagered: BigInt(player.totalWagered || '0'),
-              netProfitLoss: BigInt(player.netProfit || '0')
-            })
-          }
+          setStats({
+            totalGames: data.totalGames || 0,
+            totalWagered: BigInt(data.totalWagered || '0'),
+            netProfitLoss: BigInt(data.netProfitLoss || '0')
+          })
         }
       } catch (error) {
         console.error('Failed to fetch player stats:', error)

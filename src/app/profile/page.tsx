@@ -33,23 +33,23 @@ export default function ProfilePage() {
     }
   }, [ready, authenticated, router])
 
-  // Load profile from localStorage
+  // Load profile from MongoDB
   useEffect(() => {
     if (address) {
-      const stored = localStorage.getItem(`rugmania_profile_${address}`)
-      if (stored) {
-        setProfile(JSON.parse(stored))
-      } else {
-        // Default profile with address as username
-        const defaultProfile = {
-          username: `${address.slice(0, 6)}...${address.slice(-4)}`,
-          address: address
-        }
-        setProfile(defaultProfile)
-        localStorage.setItem(`rugmania_profile_${address}`, JSON.stringify(defaultProfile))
-      }
+      fetch(`/api/users?address=${address}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setProfile({ username: data.username, address: data.address });
+        })
+        .catch(() => {
+          // Fallback to default
+          setProfile({
+            username: `${address.slice(0, 6)}...${address.slice(-4)}`,
+            address: address,
+          });
+        });
     }
-  }, [address])
+  }, [address]);
 
   const handleCopyAddress = () => {
     if (address) {
@@ -64,20 +64,33 @@ export default function ProfilePage() {
     setIsEditing(true)
   }
 
-  const handleSaveUsername = () => {
-    if (!address || !newUsername.trim()) return
+  const handleSaveUsername = async () => {
+    if (!address || !newUsername.trim()) return;
     
-    setIsSaving(true)
-    const updatedProfile = {
-      ...profile,
-      username: newUsername.trim(),
-      address: address
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, username: newUsername.trim() }),
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        alert(data.error || 'Failed to save username');
+        setIsSaving(false);
+        return;
+      }
+      
+      setProfile({ username: data.username, address });
+      setIsEditing(false);
+    } catch (error) {
+      alert('Failed to save username');
+    } finally {
+      setIsSaving(false);
     }
-    setProfile(updatedProfile)
-    localStorage.setItem(`rugmania_profile_${address}`, JSON.stringify(updatedProfile))
-    setIsEditing(false)
-    setIsSaving(false)
-  }
+  };
 
   const handleCancelEdit = () => {
     setIsEditing(false)

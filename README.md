@@ -4,16 +4,17 @@
 
 > **Pick the right door. Multiply your winnings. Don't get rugged.**
 
-![RugMania Banner](./assets/banner.png)
-
 ---
 
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="./assets/gameplay-1.png" width="250" alt="Gameplay" />
-  <img src="./assets/gameplay-2.png" width="250" alt="Door Selection" />
-  <img src="./assets/mobile.png" width="250" alt="Mobile View" />
+  <img src="./assets/gameplay.png" width="400" alt="Gameplay" />
+</p>
+
+<p align="center">
+  <img src="./assets/mobileUI.png" width="250" alt="Mobile View" />
+  <img src="./assets/userprofile.png" width="250" alt="User Profile" />
 </p>
 
 ---

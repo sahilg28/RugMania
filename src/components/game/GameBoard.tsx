@@ -236,6 +236,20 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
     onError: (e) => console.error("DoorSelected polling error", e)
   });
 
+  // Helper to record game results to MongoDB
+  const recordGameResult = useCallback(async (won: boolean, betAmount: number, payout: number, txHash?: string) => {
+    if (isDemo || !contractAddress) return;
+    try {
+      await fetch('/api/leaderboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ player: contractAddress, won, betAmount, payout, txHash }),
+      });
+    } catch (e) {
+      console.error('Failed to record game:', e);
+    }
+  }, [isDemo, contractAddress]);
+
   useContractEventPolling({
     address: CONTRACT_ADDRESSES.doorRunner,
     eventName: 'Rugged',
@@ -245,6 +259,8 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
       logs.forEach((log) => {
         setGameState((prev) => {
           const selectedIdx = prev.doors.findIndex(d => d.isSelected);
+          // Record loss to MongoDB
+          recordGameResult(false, prev.betAmount, 0, log.transactionHash);
           return { ...prev, doors: prev.doors.map((d, i) => ({ ...d, isRevealed: true, isRug: i === selectedIdx })) };
         });
         toast.error("You got rugged!", { onClick: () => window.open(`https://sepolia.mantlescan.xyz/tx/${log.transactionHash}`, '_blank') });
@@ -263,7 +279,12 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
       logs.forEach((log) => {
         const args = log.args as any;
         if (args) {
-          setGameState((prev) => ({ ...prev, phase: "won", actualPayout: parseFloat(formatEther(args.payout)) }));
+          const payout = parseFloat(formatEther(args.payout));
+          setGameState((prev) => {
+            // Record win to MongoDB
+            recordGameResult(true, prev.betAmount, payout, log.transactionHash);
+            return { ...prev, phase: "won", actualPayout: payout };
+          });
           confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
           toast.success(`Cashed out! You won ${formatEther(args.payout)} MNT!`, {
             onClick: () => window.open(`https://sepolia.mantlescan.xyz/tx/${log.transactionHash}`, '_blank')

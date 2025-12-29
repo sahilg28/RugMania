@@ -9,12 +9,15 @@
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="./assets/gameplay.png" width="400" alt="Gameplay" />
+  <img src="./assets/gameplay.png" alt="RugMania Desktop Gameplay" />
 </p>
 
 <p align="center">
-  <img src="./assets/mobileUI.png" width="250" alt="Mobile View" />
-  <img src="./assets/userprofile.png" width="250" alt="User Profile" />
+  <img src="./assets/mobileUI.png" alt="Mobile Gameplay Interface" />
+</p>
+
+<p align="center">
+  <img src="./assets/userprofile.png" alt="User Profile & Stats" />
 </p>
 
 ---

@@ -100,7 +100,7 @@ export function ControlPanel({
               disabled={!amount || parseFloat(amount) < 0.1 || parseFloat(amount) > balance}
               className="w-full py-3 sm:py-4 text-sm sm:text-base bg-lime-400 text-black font-bold rounded-xl border-2 border-black shadow-brutal-sm hover:bg-lime-300 hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {!amount || parseFloat(amount) < 0.1 ? "Enter Amount" : parseFloat(amount) > balance ? "Insufficient Balance" : `PLAY (${parseFloat(amount).toFixed(2)} MNT)`}
+              {!amount || parseFloat(amount) < 0.1 ? "Enter Amount" : parseFloat(amount) > balance ? "Insufficient Balance" : "PLAY NOW"}
             </button>
           </div>
         ) : (
@@ -172,7 +172,7 @@ export function ControlPanel({
           <div className="flex gap-2">
             <button onClick={onCashOut} disabled={gameState.currentLevel < 1 || isCashingOut}
               className="flex-1 py-3 sm:py-4 text-sm sm:text-base bg-zinc-800 text-white font-bold rounded-xl border-2 border-zinc-700 hover:bg-lime-400 hover:text-black hover:border-black transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-              {isCashingOut ? "Cashing out..." : `CASH OUT (${isDemo ? gameState.potentialWin.toFixed(2) : (gameState.betAmount * (gameState.multiplier / 1e18) * 0.95).toFixed(2)} MNT)`}
+              {isCashingOut ? "Cashing out..." : "Cash Out"}
             </button>
             {!isDemo && onOpenProvablyFair && (
               <button 

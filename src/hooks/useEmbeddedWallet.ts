@@ -2,15 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import { usePrivy, useWallets } from '@privy-io/react-auth'
-import { createWalletClient, custom, type WalletClient, type Address } from 'viem'
+import { createWalletClient, custom, type Address } from 'viem'
 import { mantleSepolia } from '@/config/chains'
+
+type WalletClient = ReturnType<typeof createWalletClient>
+type PrivyWallet = ReturnType<typeof useWallets>['wallets'][number]
 
 interface EmbeddedWalletResult {
   address: Address | null
   walletClient: WalletClient | null
   isLoading: boolean
-  embeddedWallet: any | null
-  externalWallets: any[]
+  embeddedWallet: PrivyWallet | null
+  externalWallets: PrivyWallet[]
 }
 
 /**
@@ -23,7 +26,7 @@ export function useEmbeddedWallet(): EmbeddedWalletResult {
   const [isLoading, setIsLoading] = useState(true)
 
   // Find the embedded wallet (walletClientType === 'privy')
-  const embeddedWallet = wallets.find(wallet => wallet.walletClientType === 'privy')
+  const embeddedWallet = wallets.find(wallet => wallet.walletClientType === 'privy') ?? null
   
   // Get external wallets (for future use)
   const externalWallets = wallets.filter(wallet => wallet.walletClientType !== 'privy')

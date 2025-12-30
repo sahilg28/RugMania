@@ -21,6 +21,23 @@ import { MULTIPLIERS, GAME_MESSAGES } from "./constants";
 import { HowItWorksModal } from "@/components/modals/HowItWorksModal";
 import { ProvablyFairModal } from "@/components/modals/ProvablyFairModal";
 
+const DEBUG_LOGS = process.env.NEXT_PUBLIC_DEBUG_LOGS === "1";
+
+function logDebug(message: string, meta?: Record<string, unknown>) {
+  if (!DEBUG_LOGS) return;
+  if (meta) {
+    console.log(message, meta);
+    return;
+  }
+  console.log(message);
+}
+
+function shortHash(hash: string) {
+  if (!hash) return "";
+  if (hash.length <= 18) return hash;
+  return `${hash.slice(0, 10)}...${hash.slice(-8)}`;
+}
+
 interface GameBoardProps {
   isDemo?: boolean;
   onExitDemo?: () => void;
@@ -40,6 +57,7 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
   });
   const [isPlacingBet, setIsPlacingBet] = useState(false);
   const [isCashingOut, setIsCashingOut] = useState(false);
+  const [isSelectingDoor, setIsSelectingDoor] = useState(false);
   const [amount, setAmount] = useState("");
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>(5);
   const [currentLevel, setCurrentLevel] = useState(1);
@@ -72,13 +90,10 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
         // Verify the hash matches what's stored on contract
         const computedHash = keccak256(serverSeed as `0x${string}`);
         const contractHash = contractGame.serverSeedHash as string;
-        
-        console.log("=== RESTORING GAME ===");
-        console.log("Server seed from localStorage:", serverSeed);
-        console.log("Computed hash:", computedHash);
-        console.log("Contract hash:", contractHash);
-        console.log("Stored hash:", storedHash);
-        console.log("Hashes match:", computedHash.toLowerCase() === contractHash.toLowerCase());
+
+        logDebug("Restoring game", {
+          hashMatchesContract: computedHash.toLowerCase() === contractHash.toLowerCase(),
+        });
         
         if (computedHash.toLowerCase() !== contractHash.toLowerCase()) {
           console.error("HASH MISMATCH during restore! Seeds don't match contract.");
@@ -359,7 +374,15 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
       
       // Generate random seeds - these are bytes32 values (0x + 64 hex chars)
       const serverSeed = generateRandomSeed() as `0x${string}`;
-      const clientSeed = generateRandomSeed() as `0x${string}`;
+      
+      // Use custom client seed if available, otherwise generate random
+      let clientSeed: `0x${string}`;
+      const customClientSeed = typeof window !== 'undefined' ? localStorage.getItem('customClientSeed') : null;
+      if (customClientSeed && customClientSeed.startsWith('0x') && customClientSeed.length === 66) {
+        clientSeed = customClientSeed as `0x${string}`;
+      } else {
+        clientSeed = generateRandomSeed() as `0x${string}`;
+      }
       
       // CRITICAL: Hash the serverSeed the same way Solidity does
       // Solidity: keccak256(abi.encodePacked(serverSeed)) where serverSeed is bytes32
@@ -370,34 +393,17 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
       if (serverSeed.length !== 66 || clientSeed.length !== 66) {
         throw new Error("Invalid seed generation - wrong length");
       }
-      
-      console.log("=== PLACING BET ===");
-      console.log("Bet amount:", betAmount, "MNT");
-      console.log("Difficulty (doors):", selectedDifficulty);
-      console.log("Client seed:", clientSeed);
-      console.log("Client seed length:", clientSeed.length);
-      console.log("Server seed:", serverSeed);
-      console.log("Server seed length:", serverSeed.length);
-      console.log("Server seed hash:", serverSeedHash);
-      console.log("Server seed hash length:", serverSeedHash.length);
-      
-      // Double-check: rehash to verify consistency
-      const verifyHash = keccak256(serverSeed);
-      console.log("Verification rehash:", verifyHash);
-      console.log("Hashes match:", verifyHash === serverSeedHash);
+
+      logDebug("Placing bet", { betAmount, difficulty: selectedDifficulty });
       
       // Place bet on contract FIRST - this will throw if it fails
       const txHash = await placeBet(selectedDifficulty, clientSeed, serverSeedHash, parseEther(betAmount.toString()));
-      console.log("Bet placed successfully! TX:", txHash);
+      logDebug("Bet placed", { txHash: shortHash(String(txHash)) });
       
       // Only store seeds AFTER successful bet placement
       localStorage.setItem("clientSeed", clientSeed);
       localStorage.setItem("serverSeed", serverSeed);
       localStorage.setItem("serverSeedHash", serverSeedHash);
-      
-      console.log("Seeds stored in localStorage");
-      console.log("Stored serverSeed:", localStorage.getItem("serverSeed"));
-      console.log("Stored serverSeedHash:", localStorage.getItem("serverSeedHash"));
       
       // Refresh contract state to confirm
       await refetchContractState();
@@ -430,6 +436,7 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
 
   const handleDoorClick = useCallback(async (index: number) => {
     if (gameState.phase !== "playing" || gameState.doors[index].isRevealed) return;
+    if (!isDemo && (isSelectingDoor || isCashingOut || isPlacingBet)) return;
 
     if (isDemo) {
       const rugPosition = Math.floor(Math.random() * gameState.difficulty);
@@ -478,12 +485,13 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
     
     // Validate serverSeed is proper bytes32 format
     if (serverSeed.length !== 66 || !/^0x[0-9a-fA-F]{64}$/.test(serverSeed)) {
-      console.error("Invalid serverSeed format:", serverSeed, "Length:", serverSeed.length);
+      console.error("Invalid serverSeed format.");
       toast.error("Invalid seed format. Please start a new game.");
       return;
     }
 
     try {
+      if (!isDemo) setIsSelectingDoor(true);
       // Get stored hash - prefer localStorage as it's set right after successful bet
       const storedHash = localStorage.getItem("serverSeedHash") || gameState.serverSeedHash;
       
@@ -493,22 +501,12 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
       // Compute hash the same way Solidity does: keccak256(abi.encodePacked(bytes32))
       // viem's keccak256 on a hex string hashes the raw bytes, which matches Solidity
       const computedHash = keccak256(serverSeed as `0x${string}`);
-      
-      console.log("=== SELECTING DOOR ===");
-      console.log("Door index:", index);
-      console.log("Server seed:", serverSeed);
-      console.log("Server seed length:", serverSeed.length);
-      console.log("Computed hash:", computedHash);
-      console.log("Stored hash (localStorage/state):", storedHash);
-      console.log("Contract hash:", contractHash);
-      console.log("Current level:", gameState.currentLevel);
-      console.log("Has active game (contract):", contractGame?.isActive);
+
+      logDebug("Selecting door", { index });
       
       // Verify hash matches the contract's stored hash (most important check)
       if (contractHash && computedHash.toLowerCase() !== contractHash.toLowerCase()) {
         console.error("HASH MISMATCH WITH CONTRACT!");
-        console.error("Computed:", computedHash);
-        console.error("Contract:", contractHash);
         toast.error("Seed doesn't match contract. Your session may have expired.");
         return;
       }
@@ -516,10 +514,8 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
       // Also verify against localStorage for consistency
       if (storedHash && computedHash.toLowerCase() !== storedHash.toLowerCase()) {
         console.error("HASH MISMATCH WITH STORED!");
-        console.error("Computed:", computedHash);
-        console.error("Stored:", storedHash);
         // This is less critical - contract hash is the source of truth
-        console.warn("Stored hash doesn't match, but contract hash does. Proceeding...");
+        logDebug("Stored hash mismatch; contract hash matched, proceeding");
       }
       
       // Mark door as selected in UI
@@ -527,7 +523,7 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
       
       // Call contract
       const txHash = await selectDoor(index, serverSeed as `0x${string}`);
-      console.log("Door selected! TX:", txHash);
+      logDebug("Door selected", { txHash: shortHash(String(txHash)) });
       
       // Refresh state from contract
       await refetchContractState();
@@ -536,8 +532,10 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
       // Reset door selection on failure
       setGameState((prev) => ({ ...prev, doors: prev.doors.map((d) => ({ ...d, isSelected: false })) }));
       toast.error(error.message || "Failed to select door. Please try again.");
+    } finally {
+      if (!isDemo) setIsSelectingDoor(false);
     }
-  }, [gameState, isDemo, selectDoor, initializeDoors, refetchContractState, contractGame]);
+  }, [gameState, isDemo, isSelectingDoor, isCashingOut, isPlacingBet, selectDoor, initializeDoors, refetchContractState, contractGame]);
 
   const handleCashOut = useCallback(async () => {
     if (gameState.phase !== "playing" || gameState.currentLevel < 1) return;
@@ -596,12 +594,14 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
               gameState={gameState} isDemo={isDemo} currentLevel={currentLevel}
               selectedDifficulty={selectedDifficulty} gameMessage={gameMessage}
               onDoorClick={handleDoorClick} onLevelChange={handleLevelChange}
+              disabledDoors={!isDemo && (isSelectingDoor || isCashingOut)}
             />
             <ControlPanel
               gameState={gameState} isDemo={isDemo} balance={balance} amount={amount}
               setAmount={setAmount} selectedDifficulty={selectedDifficulty}
               setSelectedDifficulty={setSelectedDifficulty} maxBet={maxBet}
               isPlacingBet={isPlacingBet} isCashingOut={isCashingOut}
+              isSelectingDoor={isSelectingDoor}
               onStartGame={handleStartGame} onCashOut={handleCashOut}
               onPlayAgain={handlePlayAgain} onLogin={login}
               onOpenProvablyFair={() => setShowProvablyFair(true)}
@@ -621,6 +621,7 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
                   gameState={gameState} isDemo={isDemo} currentLevel={currentLevel}
                   selectedDifficulty={selectedDifficulty} gameMessage={gameMessage}
                   onDoorClick={handleDoorClick} onLevelChange={handleLevelChange}
+                  disabledDoors={!isDemo && (isSelectingDoor || isCashingOut)}
                 />
               </div>
               {/* Control panel fixed at bottom with margin */}
@@ -630,6 +631,7 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
                   setAmount={setAmount} selectedDifficulty={selectedDifficulty}
                   setSelectedDifficulty={setSelectedDifficulty} maxBet={maxBet}
                   isPlacingBet={isPlacingBet} isCashingOut={isCashingOut}
+                  isSelectingDoor={isSelectingDoor}
                   onStartGame={handleStartGame} onCashOut={handleCashOut}
                   onPlayAgain={handlePlayAgain} onLogin={login}
                   onOpenProvablyFair={() => setShowProvablyFair(true)}
@@ -700,6 +702,12 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
         serverSeedHash={gameState.serverSeedHash}
         serverSeed={gameState.phase !== "playing" ? gameState.serverSeed : undefined}
         isGameActive={gameState.phase === "playing"}
+        onClientSeedChange={(seed) => {
+          // Update localStorage is handled in modal, just refresh if needed
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('customClientSeed', seed)
+          }
+        }}
       />
     </div>
   );

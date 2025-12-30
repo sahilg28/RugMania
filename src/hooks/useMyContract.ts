@@ -6,14 +6,25 @@ import { useWallets } from "@privy-io/react-auth";
 import { useSetActiveWallet } from "@privy-io/wagmi";
 import { CONTRACT_ADDRESSES } from "@/config/chains";
 import ABI from "@/lib/contract/abi.json";
-import { formatEther, encodeFunctionData, keccak256, toHex, createPublicClient, http } from "viem";
-import { mantleSepolia } from "@/config/chains";
+import { formatEther, encodeFunctionData, keccak256, toHex } from "viem";
+import { publicClient } from "@/lib/viem";
 
-// Public client for waiting for transaction receipts
-const publicClient = createPublicClient({
-  chain: mantleSepolia,
-  transport: http('https://rpc.sepolia.mantle.xyz'),
-});
+const DEBUG_LOGS = process.env.NEXT_PUBLIC_DEBUG_LOGS === "1";
+
+function logDebug(message: string, meta?: Record<string, unknown>) {
+  if (!DEBUG_LOGS) return;
+  if (meta) {
+    console.log(message, meta);
+    return;
+  }
+  console.log(message);
+}
+
+function shortHash(hash: string) {
+  if (!hash) return "";
+  if (hash.length <= 18) return hash;
+  return `${hash.slice(0, 10)}...${hash.slice(-8)}`;
+}
 
 const CONTRACT_ERRORS: Record<string, string> = {
   GameAlreadyActive: "You already have an active game. Cash out or finish it first.",
@@ -55,7 +66,18 @@ export function useRugMania() {
 
   React.useEffect(() => {
     if (embeddedWallet && address !== embeddedAddress) {
-      setActiveWallet(embeddedWallet);
+      // Only set active wallet if it's not already active to avoid unnecessary RPC calls
+      const setWallet = async () => {
+        try {
+          await setActiveWallet(embeddedWallet);
+        } catch (error: any) {
+          // Ignore errors if wallet is already active or connection issues
+          if (!error?.message?.includes('already active') && !error?.message?.includes('406')) {
+            console.warn('Failed to set active wallet:', error);
+          }
+        }
+      };
+      setWallet();
     }
   }, [embeddedWallet, address, embeddedAddress, setActiveWallet]);
 
@@ -197,16 +219,16 @@ export function useRugMania() {
           value: value ? `0x${value.toString(16)}` : '0x0',
         }],
       });
-      
-      console.log("Transaction sent:", txHash);
+
+      logDebug("Transaction sent", { txHash: shortHash(String(txHash)) });
       
       // Wait for transaction to be mined
       const receipt = await publicClient.waitForTransactionReceipt({ 
         hash: txHash as `0x${string}`,
         timeout: 60_000, // 60 second timeout
       });
-      
-      console.log("Transaction confirmed:", receipt.status);
+
+      logDebug("Transaction confirmed", { status: receipt.status });
       
       if (receipt.status === 'reverted') {
         throw new Error("Transaction reverted on-chain. Check contract conditions.");
@@ -232,13 +254,8 @@ export function useRugMania() {
   async function placeBet(doors: number, clientSeed: `0x${string}`, serverSeedHash: `0x${string}`, valueWei: bigint) {
     const validation = validateBet(valueWei, doors);
     if (!validation.valid) throw new Error(validation.error);
-    
-    console.log("=== CONTRACT placeBet ===");
-    console.log("Doors:", doors);
-    console.log("Client seed:", clientSeed);
-    console.log("Server seed hash:", serverSeedHash);
-    console.log("Value (wei):", valueWei.toString());
-    console.log("Value (MNT):", formatEther(valueWei));
+
+    logDebug("Contract placeBet", { doors, value: formatEther(valueWei) });
     
     const data = encodeFunctionData({ abi: ABI, functionName: "placeBet", args: [doors, clientSeed, serverSeedHash] });
     const txHash = await sendTransaction(data, valueWei);
@@ -251,25 +268,15 @@ export function useRugMania() {
     if (!hasActiveGame) {
       throw new Error("No active game. Please place a bet first.");
     }
-    
-    console.log("=== CONTRACT selectDoor ===");
-    console.log("Door index:", doorIndex);
-    console.log("Server seed:", serverSeed);
-    console.log("Server seed length:", serverSeed.length);
-    console.log("Server seed type:", typeof serverSeed);
+
+    logDebug("Contract selectDoor", { doorIndex });
     
     // Verify serverSeed format
     if (!serverSeed.startsWith('0x') || serverSeed.length !== 66) {
       throw new Error(`Invalid serverSeed format: ${serverSeed.substring(0, 20)}... (length: ${serverSeed.length})`);
     }
-    
-    // Log what hash the contract will compute
-    const expectedHash = keccak256(serverSeed);
-    console.log("Expected hash (what contract will compute):", expectedHash);
-    console.log("Stored hash on contract:", game?.serverSeedHash);
-    
+
     const data = encodeFunctionData({ abi: ABI, functionName: "selectDoor", args: [doorIndex, serverSeed] });
-    console.log("Encoded function data:", data);
     
     const txHash = await sendTransaction(data);
     await refetchContractState();

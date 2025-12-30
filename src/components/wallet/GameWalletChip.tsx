@@ -3,17 +3,19 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Wallet, Plus, ArrowDownToLine } from 'lucide-react'
-import { createPublicClient, http, formatEther, type Address } from 'viem'
-import { mantleSepolia } from '@/config/chains'
+import { formatEther, type Address } from 'viem'
+import { publicClient } from '@/lib/viem'
 import { AddFundsModal } from './AddFundsModal'
 import { WithdrawModal } from './WithdrawModal'
 import { useWallets } from '@privy-io/react-auth'
 
-// Create a public client for reading balance
-const publicClient = createPublicClient({
-  chain: mantleSepolia,
-  transport: http('https://rpc.sepolia.mantle.xyz'),
-})
+const DEBUG_LOGS = process.env.NEXT_PUBLIC_DEBUG_LOGS === '1'
+
+function shortHash(hash: string) {
+  if (!hash) return ''
+  if (hash.length <= 18) return hash
+  return `${hash.slice(0, 10)}...${hash.slice(-8)}`
+}
 
 export function GameWalletChip() {
   const { wallets, ready } = useWallets()
@@ -65,8 +67,6 @@ export function GameWalletChip() {
     if (!embeddedWallet) throw new Error('Embedded wallet not available')
     
     try {
-      console.log('Initiating transfer:', { toAddress, amount: amount.toString() })
-      
       // Use Privy embedded wallet to send transaction
       const walletClient = await embeddedWallet.getEthereumProvider()
       
@@ -77,8 +77,10 @@ export function GameWalletChip() {
           value: amount.toString(),
         }],
       })
-      
-      console.log('Transfer initiated:', txHash)
+
+      if (DEBUG_LOGS) {
+        console.log('Transfer initiated:', shortHash(String(txHash)))
+      }
       return txHash
     } catch (error) {
       console.error('Transfer failed:', error)

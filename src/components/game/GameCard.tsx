@@ -15,6 +15,7 @@ interface GameCardProps {
   gameMessage: string;
   onDoorClick: (index: number) => void;
   onLevelChange: (direction: "up" | "down") => void;
+  disabledDoors?: boolean;
 }
 
 export function GameCard({
@@ -25,6 +26,7 @@ export function GameCard({
   gameMessage,
   onDoorClick,
   onLevelChange,
+  disabledDoors = false,
 }: GameCardProps) {
   return (
     <div
@@ -110,7 +112,12 @@ export function GameCard({
                   {gameState.phase === "playing" && (
                     <div className={cn("grid gap-2 sm:gap-4", gameState.difficulty === 5 && "grid-cols-5", gameState.difficulty === 4 && "grid-cols-4", gameState.difficulty === 3 && "grid-cols-3")}>
                       {gameState.doors.map((door, index) => (
-                        <RugDoor key={index} door={door} onClick={() => onDoorClick(index)} disabled={gameState.phase !== "playing"} />
+                        <RugDoor
+                          key={index}
+                          door={door}
+                          onClick={() => onDoorClick(index)}
+                          disabled={disabledDoors || gameState.phase !== "playing"}
+                        />
                       ))}
                     </div>
                   )}

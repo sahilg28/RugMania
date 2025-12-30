@@ -18,6 +18,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://rug-mania.vercel.app/"),
   title: "RugMania",
   description:
     "RugMania - A high tension onchain door game where you dodge rugs, climb through levels and decide when to lock in the win.",

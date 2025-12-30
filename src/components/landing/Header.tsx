@@ -212,9 +212,7 @@ export function Header({ isGame = false, isDemo = false, isLanding = false, onEx
 
             {/* Docs */}
             <a
-              href="https://docs.rugmania.xyz"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="#"
               onClick={() => setMobileMenuOpen(false)}
               className="w-full flex items-center gap-3 px-4 py-3 text-black hover:bg-zinc-100 transition-colors border-b border-zinc-200"
             >
@@ -238,9 +236,7 @@ export function Header({ isGame = false, isDemo = false, isLanding = false, onEx
 
             {/* Social Links */}
             <a
-              href="https://x.com/rugmania"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="#"
               onClick={() => setMobileMenuOpen(false)}
               className="w-full flex items-center gap-3 px-4 py-3 text-black hover:bg-zinc-100 transition-colors border-b border-zinc-200"
             >

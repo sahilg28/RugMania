@@ -1,12 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getDb } from "@/lib/mongodb";
+import { isAddress } from "viem";
+import { z } from "zod";
+import { jsonError, jsonOk } from "@/lib/apiResponse";
+
+const AddressQuerySchema = z.object({
+  address: z.string().min(1),
+});
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const address = searchParams.get("address");
+  const parsed = AddressQuerySchema.safeParse({ address: searchParams.get("address") });
+  if (!parsed.success) {
+    return jsonError({ status: 400, message: "Address required" });
+  }
 
-  if (!address) {
-    return NextResponse.json({ error: "Address required" }, { status: 400 });
+  const address = parsed.data.address.toLowerCase();
+
+  if (!isAddress(address)) {
+    return jsonError({ status: 400, message: "Invalid address" });
   }
 
   try {
@@ -15,7 +27,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch games for this player, sorted by newest first
     const games = await gamesCollection
-      .find({ player: address.toLowerCase() })
+      .find({ player: address })
       .sort({ timestamp: -1 })
       .limit(100)
       .toArray();
@@ -31,9 +43,9 @@ export async function GET(request: NextRequest) {
       timestamp: game.timestamp,
     }));
 
-    return NextResponse.json({ games: formattedGames });
+    return jsonOk({ games: formattedGames });
   } catch (error) {
     console.error("Failed to fetch game history:", error);
-    return NextResponse.json({ games: [] });
+    return jsonError({ status: 500, message: "Failed to fetch game history", data: { games: [] } });
   }
 }

@@ -16,6 +16,7 @@ interface ControlPanelProps {
   maxBet?: bigint;
   isPlacingBet: boolean;
   isCashingOut: boolean;
+  isSelectingDoor?: boolean;
   onStartGame: () => void;
   onCashOut: () => void;
   onPlayAgain: () => void;
@@ -35,6 +36,7 @@ export function ControlPanel({
   maxBet,
   isPlacingBet,
   isCashingOut,
+  isSelectingDoor = false,
   onStartGame,
   onCashOut,
   onPlayAgain,
@@ -138,14 +140,20 @@ export function ControlPanel({
                 className="flex-1 py-2.5 sm:py-3 text-zinc-400 font-bold text-xs sm:text-sm rounded-lg border-2 border-zinc-700 bg-zinc-800 hover:bg-lime-400 hover:text-black hover:border-black transition-all disabled:opacity-50">
                 {isPlacingBet ? "Placing Bet..." : !amount || parseFloat(amount) < 0.1 ? "Min Bet: 0.1 MNT" : parseFloat(amount) > maxBetValue ? `Max Bet: ${maxBetValue.toFixed(2)} MNT` : parseFloat(amount) > balance ? "Insufficient Balance" : "Place Bet"}
               </button>
-              <button onClick={onStartGame} disabled={isPlacingBet || !amount || parseFloat(amount) < 0.1 || parseFloat(amount) > maxBetValue || parseFloat(amount) > balance}
-                className="w-10 sm:w-12 py-2.5 sm:py-3 bg-lime-400 text-black font-bold rounded-lg border-2 border-black flex items-center justify-center disabled:opacity-50 shadow-brutal-sm hover:bg-lime-300 transition-all">
-                {isPlacingBet ? (
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
-                ) : (
+              {!isDemo && onOpenProvablyFair && (
+                <button 
+                  onClick={onOpenProvablyFair}
+                  disabled={isPlacingBet}
+                  className={cn(
+                    "w-10 sm:w-12 py-2.5 sm:py-3 rounded-lg border-2 flex items-center justify-center transition-all",
+                    "bg-lime-400 text-black border-black shadow-brutal-sm hover:bg-lime-300",
+                    "disabled:opacity-50 disabled:cursor-not-allowed"
+                  )}
+                  title="Provably Fair (view/change seeds)"
+                >
                   <svg className="w-4 h-4 sm:w-5 sm:h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6L9 17l-5-5" /></svg>
-                )}
-              </button>
+                </button>
+              )}
             </div>
           </div>
         )
@@ -169,23 +177,12 @@ export function ControlPanel({
               </span>
             </div>
           </div>
-          <div className="flex gap-2">
-            <button onClick={onCashOut} disabled={gameState.currentLevel < 1 || isCashingOut}
-              className="flex-1 py-3 sm:py-4 text-sm sm:text-base bg-zinc-800 text-white font-bold rounded-xl border-2 border-zinc-700 hover:bg-lime-400 hover:text-black hover:border-black transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-              {isCashingOut ? "Cashing out..." : "Cash Out"}
-            </button>
-            {!isDemo && onOpenProvablyFair && (
-              <button 
-                onClick={onOpenProvablyFair}
-                className="w-10 sm:w-12 py-3 sm:py-4 bg-green-500 text-white font-bold rounded-xl border-2 border-green-600 flex items-center justify-center shadow-brutal-sm hover:bg-green-400 transition-all"
-                title="Provably Fair"
-              >
-                <svg className="w-4 h-4 sm:w-5 sm:h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M20 6L9 17l-5-5" />
-                </svg>
-              </button>
-            )}
-          </div>
+          <button onClick={onCashOut} disabled={gameState.currentLevel < 1 || isCashingOut || isSelectingDoor}
+            className="w-full py-3 sm:py-4 text-sm sm:text-base bg-zinc-800 text-white font-bold rounded-xl border-2 border-zinc-700 hover:bg-lime-400 hover:text-black hover:border-black transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+            {isCashingOut ? "Cashing out..." : isSelectingDoor ? (
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 animate-spin mx-auto" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+            ) : "Cash Out"}
+          </button>
         </div>
       )}
 

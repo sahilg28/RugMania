@@ -1,19 +1,31 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getDb } from "@/lib/mongodb";
+import { isAddress } from "viem";
+import { z } from "zod";
+import { jsonError, jsonOk } from "@/lib/apiResponse";
+
+const AddressQuerySchema = z.object({
+  address: z.string().min(1),
+});
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const address = searchParams.get("address");
+  const parsed = AddressQuerySchema.safeParse({ address: searchParams.get("address") });
+  if (!parsed.success) {
+    return jsonError({ status: 400, message: "Address required" });
+  }
 
-  if (!address) {
-    return NextResponse.json({ error: "Address required" }, { status: 400 });
+  const address = parsed.data.address.toLowerCase();
+
+  if (!isAddress(address)) {
+    return jsonError({ status: 400, message: "Invalid address" });
   }
 
   try {
     const db = await getDb();
     const gamesCollection = db.collection("games");
 
-    const normalizedAddress = address.toLowerCase();
+    const normalizedAddress = address;
 
     // Aggregate stats for this player
     const pipeline = [
@@ -33,7 +45,7 @@ export async function GET(request: NextRequest) {
     const results = await gamesCollection.aggregate(pipeline).toArray();
 
     if (results.length === 0) {
-      return NextResponse.json({
+      return jsonOk({
         totalGames: 0,
         wins: 0,
         totalWagered: "0",
@@ -45,7 +57,7 @@ export async function GET(request: NextRequest) {
     // Net profit = total payouts - total wagered on losses
     const netProfitLoss = (stats.totalPayout || 0) - (stats.totalLost || 0);
 
-    return NextResponse.json({
+    return jsonOk({
       totalGames: stats.totalGames || 0,
       wins: stats.wins || 0,
       totalWagered: BigInt(Math.floor((stats.totalWagered || 0) * 1e18)).toString(),
@@ -53,11 +65,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Failed to fetch player stats:", error);
-    return NextResponse.json({
-      totalGames: 0,
-      wins: 0,
-      totalWagered: "0",
-      netProfitLoss: "0",
+    return jsonError({
+      status: 500,
+      message: "Failed to fetch player stats",
+      data: { totalGames: 0, wins: 0, totalWagered: "0", netProfitLoss: "0" },
     });
   }
 }

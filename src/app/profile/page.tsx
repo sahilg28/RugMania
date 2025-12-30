@@ -9,6 +9,7 @@ import { useEmbeddedWallet } from '@/hooks/useEmbeddedWallet'
 import { Button } from '@/components/ui/Button'
 import { PlayerStatsCards } from '@/components/profile/PlayerStatsCards'
 import { GameHistoryTable } from '@/components/profile/GameHistoryTable'
+import { toHex } from 'viem'
 
 interface UserProfile {
   username: string
@@ -18,7 +19,7 @@ interface UserProfile {
 export default function ProfilePage() {
   const router = useRouter()
   const { authenticated, ready } = usePrivy()
-  const { address } = useEmbeddedWallet()
+  const { address, embeddedWallet } = useEmbeddedWallet()
   
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -69,10 +70,27 @@ export default function ProfilePage() {
     
     setIsSaving(true);
     try {
+      if (!embeddedWallet) {
+        alert('Wallet not connected')
+        setIsSaving(false)
+        return
+      }
+
+      const timestamp = Date.now()
+      const normalizedAddress = address.toLowerCase()
+      const trimmed = newUsername.trim()
+      const message = `RugMania - Set Username\nAddress: ${normalizedAddress}\nUsername: ${trimmed}\nTimestamp: ${timestamp}`
+
+      const provider = await embeddedWallet.getEthereumProvider()
+      const signature = await provider.request({
+        method: 'personal_sign',
+        params: [toHex(message), normalizedAddress],
+      })
+
       const res = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address, username: newUsername.trim() }),
+        body: JSON.stringify({ address: normalizedAddress, username: trimmed, signature, timestamp }),
       });
       
       const data = await res.json();

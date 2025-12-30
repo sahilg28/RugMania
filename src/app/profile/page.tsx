@@ -108,26 +108,26 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-dark)' }}>
       {/* Header */}
-      <header className="border-b border-zinc-800/50 px-4 py-3">
+      <header className="border-b border-zinc-800/50 px-3 sm:px-4 py-3">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <Button size="sm" onClick={() => router.back()}>
             <ArrowLeft className="w-4 h-4" />
-            Back
+            <span className="hidden sm:inline">Back</span>
           </Button>
           <h1 className="text-white font-bold text-lg">Profile</h1>
-          <div className="w-20" /> {/* Spacer */}
+          <div className="w-16 sm:w-20" /> {/* Spacer */}
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Left Column - Profile Info */}
           <div className="lg:col-span-1 space-y-4">
             {/* Username Card */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-zinc-900 border-2 border-black rounded-base p-6"
+              className="bg-zinc-900 border-2 border-zinc-700 rounded-base p-4 sm:p-6"
             >
               {isEditing ? (
                 <div className="space-y-4">
@@ -136,7 +136,7 @@ export default function ProfilePage() {
                     value={newUsername}
                     onChange={(e) => setNewUsername(e.target.value)}
                     maxLength={20}
-                    className="w-full bg-zinc-800 border-2 border-zinc-700 rounded-base px-4 py-2 text-white font-bold text-xl focus:border-main focus:outline-none"
+                    className="w-full bg-zinc-800 border-2 border-zinc-700 rounded-base px-4 py-2 text-white font-bold text-lg sm:text-xl focus:border-main focus:outline-none"
                     placeholder="Enter username"
                     autoFocus
                   />
@@ -155,10 +155,10 @@ export default function ProfilePage() {
                 </div>
               ) : (
                 <div className="flex items-center justify-between">
-                  <h2 className="text-white font-black text-2xl">{profile?.username}</h2>
+                  <h2 className="text-white font-black text-xl sm:text-2xl truncate pr-2">{profile?.username}</h2>
                   <button
                     onClick={handleEditUsername}
-                    className="w-10 h-10 flex items-center justify-center rounded-base border-2 border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors"
+                    className="shrink-0 w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-base border-2 border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors"
                     title="Edit username"
                   >
                     <Pencil className="w-4 h-4" />
@@ -168,12 +168,12 @@ export default function ProfilePage() {
               
               {/* Wallet Address */}
               <div className="mt-4 flex items-center gap-2">
-                <span className="text-zinc-400 font-mono text-sm">
+                <span className="text-zinc-400 font-mono text-xs sm:text-sm truncate">
                   {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : ''}
                 </span>
                 <button
                   onClick={handleCopyAddress}
-                  className="p-1.5 rounded hover:bg-zinc-800 transition-colors"
+                  className="shrink-0 p-1.5 rounded hover:bg-zinc-800 transition-colors"
                   title="Copy address"
                 >
                   {copied ? (

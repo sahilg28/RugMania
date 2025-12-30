@@ -29,12 +29,21 @@ export const metadata: Metadata = {
       "Dodge the rug, chase the win. In RugMania every door choice can push you higher or end it all.",
     type: "website",
     locale: "en_US",
+    images: [
+      {
+        url: "/icon.png",
+        width: 512,
+        height: 512,
+        alt: "RugMania",
+      },
+    ],
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title: "RugMania",
     description:
       "Dodge the rug, climb levels and lock in the win before it slips away.",
+    images: ["/icon.png"],
   },
   robots: {
     index: true,
@@ -54,12 +63,12 @@ export default function RootLayout({
           {children}
            <ToastContainer
           position="top-right"
-          autoClose={10000}
+          autoClose={3000}
           hideProgressBar={false}
-          newestOnTop={false}
+          newestOnTop
           closeOnClick
           rtl={false}
-          pauseOnFocusLoss
+          pauseOnFocusLoss={false}
           draggable
           pauseOnHover
           theme="dark"

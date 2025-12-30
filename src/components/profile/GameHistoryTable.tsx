@@ -58,14 +58,19 @@ export function GameHistoryTable({ address }: GameHistoryTableProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
-      className="bg-white border-2 border-black rounded-base overflow-hidden shadow-brutal"
+      className="bg-zinc-900 border-2 border-zinc-700 rounded-base overflow-hidden"
     >
       {/* Table Header */}
-      <div className="grid grid-cols-4 gap-4 px-4 py-3 bg-zinc-100 border-b-2 border-black text-sm font-bold text-zinc-600 uppercase">
+      <div className="hidden sm:grid grid-cols-4 gap-4 px-4 py-3 bg-zinc-800 border-b-2 border-zinc-700 text-sm font-bold text-zinc-400 uppercase">
         <div>Game ID</div>
         <div>Status</div>
         <div>Wagered</div>
         <div>Winnings</div>
+      </div>
+      
+      {/* Mobile Header */}
+      <div className="sm:hidden px-4 py-3 bg-zinc-800 border-b-2 border-zinc-700">
+        <span className="text-sm font-bold text-zinc-400 uppercase">Game History</span>
       </div>
 
       {/* Table Body */}
@@ -86,18 +91,33 @@ export function GameHistoryTable({ address }: GameHistoryTableProps) {
             {games.slice(0, displayCount).map((game, index) => (
               <div
                 key={game.gameId + index}
-                className="grid grid-cols-4 gap-4 px-4 py-3 border-b border-zinc-200 hover:bg-zinc-50 transition-colors"
+                className="sm:grid sm:grid-cols-4 gap-2 sm:gap-4 px-4 py-3 border-b border-zinc-800 hover:bg-zinc-800/50 transition-colors"
               >
-                <div className="font-mono text-zinc-700">{game.gameId}</div>
-                <div>
-                  <span className={`font-bold ${game.status === 'Win' ? 'text-emerald-500' : 'text-red-500'}`}>
+                {/* Mobile Layout */}
+                <div className="sm:hidden flex justify-between items-center mb-2">
+                  <span className="font-mono text-zinc-400 text-sm">{game.gameId}</span>
+                  <span className={`font-bold text-sm ${game.status === 'Win' ? 'text-main' : 'text-red-500'}`}>
                     {game.status}
                   </span>
                 </div>
-                <div className="font-mono text-zinc-700">
-                  {formatMNT(game.wagered)} <span className="text-zinc-400">◈</span>
+                <div className="sm:hidden flex justify-between items-center text-sm">
+                  <span className="text-zinc-500">Wagered: <span className="text-white font-mono">{formatMNT(game.wagered)} ◈</span></span>
+                  <span className={`font-mono font-bold ${game.winnings >= 0 ? 'text-main' : 'text-red-500'}`}>
+                    {game.winnings >= 0 ? '+' : ''}{formatMNT(game.winnings)} ◈
+                  </span>
                 </div>
-                <div className={`font-mono font-bold ${game.winnings >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                
+                {/* Desktop Layout */}
+                <div className="hidden sm:block font-mono text-zinc-400">{game.gameId}</div>
+                <div className="hidden sm:block">
+                  <span className={`font-bold ${game.status === 'Win' ? 'text-main' : 'text-red-500'}`}>
+                    {game.status}
+                  </span>
+                </div>
+                <div className="hidden sm:block font-mono text-zinc-300">
+                  {formatMNT(game.wagered)} <span className="text-zinc-500">◈</span>
+                </div>
+                <div className={`hidden sm:block font-mono font-bold ${game.winnings >= 0 ? 'text-main' : 'text-red-500'}`}>
                   {game.winnings >= 0 ? '+' : ''}{formatMNT(game.winnings)} <span className="opacity-70">◈</span>
                 </div>
               </div>
@@ -108,8 +128,8 @@ export function GameHistoryTable({ address }: GameHistoryTableProps) {
 
       {/* Footer */}
       {games.length > 0 && (
-        <div className="px-4 py-2 bg-zinc-50 border-t border-zinc-200 text-center text-sm text-zinc-500">
-          Showing {Math.min(displayCount, games.length)} of {games.length} games • Scroll for more
+        <div className="px-4 py-2 bg-zinc-800 border-t border-zinc-700 text-center text-sm text-zinc-500">
+          Showing {Math.min(displayCount, games.length)} of {games.length} games
         </div>
       )}
     </motion.div>

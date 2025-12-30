@@ -33,7 +33,7 @@ export function Providers({ children }: ProvidersProps) {
         appearance: {
           theme: 'dark',
           accentColor: '#c8ff00',
-          logo: '/logo.png',
+          logo: '/icon.png',
         },
         embeddedWallets: {
           ethereum: {

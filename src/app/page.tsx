@@ -6,12 +6,14 @@ import { Header, GamePreview, CTASection, Footer } from '@/components/landing'
 import { GameBoard } from '@/components/game/GameBoard'
 import { Leaderboard } from '@/components/game/Leaderboard'
 import { Loading } from '@/components/ui/Loading'
+import { HowItWorksModal } from '@/components/modals/HowItWorksModal'
 
 export default function Home() {
   const { authenticated, ready } = usePrivy()
   const [isDemoMode, setIsDemoMode] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isTransitioning, setIsTransitioning] = useState(false)
+  const [showHowItWorks, setShowHowItWorks] = useState(false)
 
   useEffect(() => {
     if (ready) {
@@ -65,7 +67,12 @@ export default function Home() {
         </div>
       </main>
 
-      <Footer />
+      <Footer onOpenHowItWorks={() => setShowHowItWorks(true)} />
+      
+      <HowItWorksModal 
+        isOpen={showHowItWorks} 
+        onClose={() => setShowHowItWorks(false)} 
+      />
     </div>
   )
 }

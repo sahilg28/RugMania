@@ -63,18 +63,20 @@ export function PlayerStatsCards({ address }: PlayerStatsCardsProps) {
 
   const cards = [
     {
-      label: 'Total Games Played',
+      label: 'Total Games',
       value: formatNumber(stats.totalGames),
-      color: 'bg-main'
+      color: 'bg-main',
+      textColor: 'text-black'
     },
     {
-      label: 'Total Volume Wagered',
+      label: 'Volume Wagered',
       value: formatMNT(stats.totalWagered),
       suffix: '◈',
-      color: 'bg-main'
+      color: 'bg-main',
+      textColor: 'text-black'
     },
     {
-      label: 'Net Profit or Loss',
+      label: 'Net P/L',
       value: (stats.netProfitLoss >= 0 ? '+' : '') + formatMNT(stats.netProfitLoss),
       suffix: '◈',
       color: stats.netProfitLoss >= 0 ? 'bg-main' : 'bg-red-500',
@@ -83,26 +85,26 @@ export function PlayerStatsCards({ address }: PlayerStatsCardsProps) {
   ]
 
   return (
-    <div className="space-y-3">
+    <div className="grid grid-cols-3 lg:grid-cols-1 gap-2 sm:gap-3">
       {cards.map((card, index) => (
         <motion.div
           key={card.label}
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: index * 0.1 }}
-          className={`${card.color} border-2 border-black rounded-base p-4 shadow-brutal`}
+          className={`${card.color} border-2 border-black rounded-base p-3 sm:p-4`}
         >
           {isLoading ? (
             <div className="animate-pulse">
-              <div className="h-8 bg-black/20 rounded w-20 mb-1" />
-              <div className="h-4 bg-black/20 rounded w-32" />
+              <div className="h-6 sm:h-8 bg-black/20 rounded w-12 sm:w-20 mb-1" />
+              <div className="h-3 sm:h-4 bg-black/20 rounded w-16 sm:w-32" />
             </div>
           ) : (
             <>
-              <div className={`text-2xl font-black ${card.textColor || 'text-black'}`}>
-                {card.value} {card.suffix && <span className="text-lg">{card.suffix}</span>}
+              <div className={`text-lg sm:text-2xl font-black ${card.textColor}`}>
+                {card.value} {card.suffix && <span className="text-sm sm:text-lg">{card.suffix}</span>}
               </div>
-              <div className={`text-sm font-medium ${card.textColor ? 'text-white/80' : 'text-black/70'}`}>
+              <div className={`text-xs sm:text-sm font-medium ${card.textColor === 'text-white' ? 'text-white/80' : 'text-black/70'}`}>
                 {card.label}
               </div>
             </>

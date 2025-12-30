@@ -104,10 +104,6 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
           potentialWin: parseFloat(formatEther(contractGame.betAmount)) * (Number(contractGame.multiplier) / 1e18),
         });
         setCurrentLevel(contractGame.currentLevel + 1);
-        if (!hasShownRestoreToast) {
-          toast.info("Restored your active game from blockchain!");
-          setHasShownRestoreToast(true);
-        }
         return;
       }
       
@@ -118,7 +114,7 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
         if (canCashOut) {
           toast.warning("Session expired but you can cash out your winnings!", { autoClose: false });
         } else {
-          toast.error("Session expired. Game at level 0 cannot be recovered. Funds are stuck until contract timeout.", { autoClose: false });
+          toast.error("Session expired. Game at level 0 cannot be recovered.", { autoClose: false });
         }
         setHasShownRestoreToast(true);
       }
@@ -185,9 +181,6 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
       logs.forEach((log) => {
         const args = log.args as any;
         if (args) {
-          toast.success(`Bet Placed! ${parseFloat(formatEther(args.amount)).toFixed(4)} MNT`, {
-            onClick: () => window.open(`https://sepolia.mantlescan.xyz/tx/${log.transactionHash}`, '_blank')
-          });
           setGameState((prev) => ({ ...prev, betAmount: parseFloat(formatEther(args.amount)), difficulty: args.diffculty as Difficulty }));
         }
       });
@@ -214,9 +207,6 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
             };
           });
           setCurrentLevel(newLevel);
-          toast.success(`Level ${newLevel + 1} reached! ${(Number(args.newMultiplier) / 1e18).toFixed(2)}x`, {
-            onClick: () => window.open(`https://sepolia.mantlescan.xyz/tx/${log.transactionHash}`, '_blank')
-          });
           if (maxLevels && newLevel >= Number(maxLevels)) {
             confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
             setGameState((prev) => ({ ...prev, phase: "won" }));
@@ -228,7 +218,7 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
             const selectedIdx = prev.doors.findIndex(d => d.isSelected);
             return { ...prev, doors: prev.doors.map((d, i) => ({ ...d, isRevealed: true, isRug: i === selectedIdx, isSelected: i === selectedIdx })) };
           });
-          toast.error("You got rugged!", { onClick: () => window.open(`https://sepolia.mantlescan.xyz/tx/${log.transactionHash}`, '_blank') });
+          toast.error("You got rugged!");
           setTimeout(() => setGameState((prev) => ({ ...prev, phase: "rugged", doors: prev.doors.map(d => ({ ...d, isRevealed: true })) })), 1500);
         }
       });
@@ -263,7 +253,7 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
           recordGameResult(false, prev.betAmount, 0, log.transactionHash);
           return { ...prev, doors: prev.doors.map((d, i) => ({ ...d, isRevealed: true, isRug: i === selectedIdx })) };
         });
-        toast.error("You got rugged!", { onClick: () => window.open(`https://sepolia.mantlescan.xyz/tx/${log.transactionHash}`, '_blank') });
+        toast.error("You got rugged!");
         setTimeout(() => setGameState((prev) => ({ ...prev, phase: "rugged", doors: prev.doors.map(d => ({ ...d, isRevealed: true })) })), 1500);
       });
     },
@@ -286,9 +276,7 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
             return { ...prev, phase: "won", actualPayout: payout };
           });
           confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-          toast.success(`Cashed out! You won ${formatEther(args.payout)} MNT!`, {
-            onClick: () => window.open(`https://sepolia.mantlescan.xyz/tx/${log.transactionHash}`, '_blank')
-          });
+          toast.success(`You won ${formatEther(args.payout)} MNT!`);
         }
       });
     },
@@ -302,7 +290,6 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
     enabled: !!contractAddress && !isDemo,
     onLogs: () => {
       confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
-      toast.success("Maximum level achieved! You're a legend!");
     },
     onError: (e) => console.error("MaxLevelAchieved polling error", e)
   });
@@ -356,8 +343,6 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
       
       // Deduct bet from demo balance
       setDemoBalance(prev => prev - demoBetAmount);
-      
-      toast.info(`🎲 Playing with ${demoBetAmount.toFixed(2)} MNT`);
       
       setGameState({
         phase: "playing", betAmount: demoBetAmount, difficulty: selectedDifficulty, currentLevel: 1,
@@ -431,8 +416,6 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
         potentialWin: betAmount, // At level 0, potential win = bet amount (1x)
       });
       setCurrentLevel(1);
-      
-      toast.success("Bet placed! Select a door to continue.");
     } catch (error: any) {
       console.error("=== BET FAILED ===", error);
       // Clear seeds on failure
@@ -455,7 +438,6 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
 
       if (isRug) {
         setGameState((prev) => ({ ...prev, phase: "rugged", doors: newDoors }));
-        toast.error("💀 You got RUGGED! Better luck next time!");
         setTimeout(() => setGameState((prev) => ({ ...prev, doors: newDoors.map((d, i) => ({ ...d, isRevealed: true, isRug: i === rugPosition })) })), 500);
       } else {
         setGameState((prev) => ({ ...prev, doors: newDoors }));
@@ -463,12 +445,9 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
         const newMultiplier = MULTIPLIERS[gameState.difficulty][nextLevel - 1] || gameState.multiplier;
         const newPotentialWin = gameState.betAmount * newMultiplier;
         
-        toast.success(`🎉 Level ${nextLevel}! Multiplier: ${newMultiplier.toFixed(2)}x`);
-        
         setTimeout(() => {
           if (nextLevel > 10) {
             confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
-            toast.success(`🏆 MAX LEVEL! You won ${newPotentialWin.toFixed(4)} MNT!`);
             setDemoBalance(prev => prev + newPotentialWin);
             setGameState((prev) => ({ ...prev, phase: "won", actualPayout: newPotentialWin }));
           } else {
@@ -565,7 +544,6 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
     if (isDemo) {
       const winAmount = gameState.potentialWin;
       confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
-      toast.success(`💰 Cashed out ${winAmount.toFixed(4)} MNT!`);
       setDemoBalance(prev => prev + winAmount);
       setGameState((prev) => ({ ...prev, phase: "won", actualPayout: winAmount }));
       return;
@@ -594,7 +572,6 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
   // Reset demo balance when it gets too low
   const handleResetDemoBalance = useCallback(() => {
     setDemoBalance(10);
-    toast.info("🎮 Demo balance reset to 10 MNT!");
   }, []);
 
   const handleExit = () => { if (isDemo && onExitDemo) onExitDemo(); else logout(); };

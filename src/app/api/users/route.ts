@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
 
     // Ensure indexes exist (idempotent). This is required to enforce integrity at the DB layer.
     await usersCollection.createIndex({ address: 1 }, { unique: true });
-    await usersCollection.createIndex({ usernameLower: 1 }, { unique: true });
+    await usersCollection.createIndex({ usernameLower: 1 }, { unique: true, sparse: true });
 
     // Check if username is taken by another user
     const existingUser = await usersCollection.findOne({

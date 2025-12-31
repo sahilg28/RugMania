@@ -74,6 +74,8 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
   // Sync game state from contract on mount
   useEffect(() => {
     if (isDemo || !contractGame) return;
+
+    (async () => {
     
     if (contractGame.isActive && gameState.phase === "idle") {
       let serverSeed = localStorage.getItem("serverSeed");
@@ -104,6 +106,58 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
           serverSeed = null;
         }
       }
+
+      // If no serverSeed in localStorage, try MongoDB
+    if (!serverSeed && contractAddress) {
+      try {
+        const response = await fetch(`/api/users/game-state?address=${contractAddress}`);
+        if (response.ok) {
+          const dbData = await response.json();
+          console.log("db data", dbData);
+          if (dbData.serverSeed) {
+            console.log("=== RESTORING FROM MONGODB ===");
+            console.log("Server seed from DB:", dbData.serverSeed);
+            
+            // Restore seeds from MongoDB
+            serverSeed = dbData.serverSeed;
+            clientSeed = dbData.clientSeed;
+            
+            // Verify hash matches contract
+            const computedHash = keccak256(serverSeed as `0x${string}`);
+            const contractHash = contractGame.serverSeedHash as string;
+            
+            if (computedHash.toLowerCase() === contractHash.toLowerCase()) {
+              // Hash matches - restore game state
+              setGameState({
+                phase: "playing",
+                betAmount: parseFloat(formatEther(contractGame.betAmount)),
+                difficulty: contractGame.doorsPerLevel as Difficulty,
+                currentLevel: contractGame.currentLevel,
+                multiplier: MULTIPLIERS[contractGame.doorsPerLevel][contractGame.currentLevel] * 1e18,
+                doors: initializeDoors(contractGame.doorsPerLevel),
+                serverSeed: dbData.serverSeed || "",
+                clientSeed: dbData.clientSeed || "",
+                serverSeedHash: dbData.serverSeedHash,
+                potentialWin: parseFloat(formatEther(contractGame.betAmount)) * MULTIPLIERS[contractGame.doorsPerLevel][contractGame.currentLevel],
+              });
+              setCurrentLevel(contractGame.currentLevel + 1);
+              
+              // Also save to localStorage for future use
+              if (serverSeed) {
+  localStorage.setItem("serverSeed", serverSeed);
+}
+              localStorage.setItem("clientSeed", clientSeed || "");
+              localStorage.setItem("serverSeedHash", dbData.serverSeedHash);
+              return;
+            } else {
+              console.error("HASH MISMATCH from MongoDB! Seeds don't match contract.");
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch game state from DB:", error);
+      }
+    }
       
       if (serverSeed) {
         setGameState({
@@ -168,6 +222,7 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
         setCurrentLevel(1);
       }
     }
+  })();
   }, [contractGame, isDemo, gameState.phase, gameState.doors, initializeDoors, hasShownRestoreToast]);
 
   // localStorage persistence - only used to persist serverSeed/clientSeed during active game
@@ -216,8 +271,10 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
           setGameState((prev) => {
             const selectedIdx = prev.doors.findIndex(d => d.isSelected);
             return {
-              ...prev, currentLevel: newLevel, multiplier: Number(args.newMultiplier),
-              potentialWin: prev.betAmount * (Number(args.newMultiplier) / 1e18) * 1e18,
+              // ...prev, currentLevel: newLevel, multiplier: Number(args.newMultiplier),
+              // potentialWin: prev.betAmount * (Number(args.newMultiplier) / 1e18) * 1e18,
+              ...prev, currentLevel: newLevel, multiplier: MULTIPLIERS[gameState.difficulty][newLevel] * 1e18,
+              potentialWin: prev.betAmount * MULTIPLIERS[gameState.difficulty][newLevel],
               doors: prev.doors.map((d, i) => ({ ...d, isRevealed: i === selectedIdx, isRug: false, isSelected: i === selectedIdx })),
             };
           });
@@ -233,7 +290,7 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
             const selectedIdx = prev.doors.findIndex(d => d.isSelected);
             return { ...prev, doors: prev.doors.map((d, i) => ({ ...d, isRevealed: true, isRug: i === selectedIdx, isSelected: i === selectedIdx })) };
           });
-          toast.error("You got rugged!");
+          // toast.error("You got rugged!");
           setTimeout(() => setGameState((prev) => ({ ...prev, phase: "rugged", doors: prev.doors.map(d => ({ ...d, isRevealed: true })) })), 1500);
         }
       });
@@ -250,6 +307,11 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ player: contractAddress, won, betAmount, payout, txHash }),
       });
+
+      // Delete game session after recording result
+    await fetch(`/api/users/game-state?address=${contractAddress}`, { method: 'DELETE' });
+    console.log("Game session deleted after recording result");
+
     } catch (e) {
       console.error('Failed to record game:', e);
     }
@@ -260,12 +322,13 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
     eventName: 'Rugged',
     args: { player: contractAddress },
     enabled: !!contractAddress && !isDemo,
-    onLogs: (logs) => {
-      logs.forEach((log) => {
+    onLogs: async (logs) => {
+      logs.forEach(async (log) => {
         setGameState((prev) => {
           const selectedIdx = prev.doors.findIndex(d => d.isSelected);
           // Record loss to MongoDB
           recordGameResult(false, prev.betAmount, 0, log.transactionHash);
+          
           return { ...prev, doors: prev.doors.map((d, i) => ({ ...d, isRevealed: true, isRug: i === selectedIdx })) };
         });
         toast.error("You got rugged!");
@@ -288,7 +351,12 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
           setGameState((prev) => {
             // Record win to MongoDB
             recordGameResult(true, prev.betAmount, payout, log.transactionHash);
-            return { ...prev, phase: "won", actualPayout: payout };
+
+            // Show last completed level instead of current level
+  const completedLevel = prev.currentLevel - 1;
+  const completedMultiplier = MULTIPLIERS[prev.difficulty][completedLevel] * 1e18;
+  
+            return { ...prev, phase: "won", actualPayout: payout, currentLevel: completedLevel,  multiplier: completedMultiplier  };
           });
           confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
           toast.success(`You won ${formatEther(args.payout)} MNT!`);
@@ -360,7 +428,7 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
       setDemoBalance(prev => prev - demoBetAmount);
       
       setGameState({
-        phase: "playing", betAmount: demoBetAmount, difficulty: selectedDifficulty, currentLevel: 1,
+        phase: "playing", betAmount: demoBetAmount, difficulty: selectedDifficulty, currentLevel: 0,
         multiplier: MULTIPLIERS[selectedDifficulty][0], doors: initializeDoors(selectedDifficulty),
         serverSeed: generateRandomSeed(), clientSeed: generateRandomSeed(), serverSeedHash: generateRandomSeed(),
         potentialWin: demoBetAmount * MULTIPLIERS[selectedDifficulty][0],
@@ -404,6 +472,21 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
       localStorage.setItem("clientSeed", clientSeed);
       localStorage.setItem("serverSeed", serverSeed);
       localStorage.setItem("serverSeedHash", serverSeedHash);
+
+
+
+       await fetch('/api/users/game-state', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      playerAddress: contractAddress,
+      serverSeed,
+      serverSeedHash,
+      betAmount: parseFloat(betAmount.toString()), // Send as number (MNT)
+      difficulty: selectedDifficulty,
+    }),
+  });
+  console.log("Game state saved to MongoDB");
       
       // Refresh contract state to confirm
       await refetchContractState();
@@ -414,7 +497,8 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
         betAmount, 
         difficulty: selectedDifficulty, 
         currentLevel: 0,
-        multiplier: 1e18, // Contract starts at 1e18 (1x)
+        // multiplier: 1e18, // Contract starts at 1e18 (1x)
+        multiplier: MULTIPLIERS[selectedDifficulty][0] * 1e18, // Use level 1 multiplier
         doors: initializeDoors(selectedDifficulty),
         serverSeed, 
         clientSeed, 
@@ -449,7 +533,8 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
       } else {
         setGameState((prev) => ({ ...prev, doors: newDoors }));
         const nextLevel = gameState.currentLevel + 1;
-        const newMultiplier = MULTIPLIERS[gameState.difficulty][nextLevel - 1] || gameState.multiplier;
+        // const newMultiplier = MULTIPLIERS[gameState.difficulty][nextLevel - 1] || gameState.multiplier;
+       const newMultiplier = MULTIPLIERS[gameState.difficulty][nextLevel] || gameState.multiplier;
         const newPotentialWin = gameState.betAmount * newMultiplier;
         
         setTimeout(() => {
@@ -543,7 +628,7 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
       const winAmount = gameState.potentialWin;
       confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
       setDemoBalance(prev => prev + winAmount);
-      setGameState((prev) => ({ ...prev, phase: "won", actualPayout: winAmount }));
+      setGameState((prev) => ({ ...prev, phase: "won", actualPayout: winAmount, currentLevel: prev.currentLevel - 1 }));
       return;
     }
     try {
@@ -551,6 +636,10 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
       await cashOut();
       confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
       setGameState((prev) => ({ ...prev, phase: "won" }));
+      if (contractAddress && !isDemo) {
+  await fetch(`/api/users/game-state?address=${contractAddress}`, { method: 'DELETE' });
+  console.log("Game session deleted after manual cashout");
+}
     } catch (error: any) {
       toast.error(error.message || "Failed to cash out.");
     } finally {
@@ -574,7 +663,7 @@ export function GameBoard({ isDemo = false, onExitDemo }: GameBoardProps) {
 
   const handleExit = () => { if (isDemo && onExitDemo) onExitDemo(); else logout(); };
   const handleLevelChange = (direction: "up" | "down") => {
-    if (direction === "up" && currentLevel < 10) setCurrentLevel((p) => p + 1);
+    if (direction === "up" && currentLevel < 15) setCurrentLevel((p) => p + 1);
     if (direction === "down" && currentLevel > 1) setCurrentLevel((p) => p - 1);
   };
 

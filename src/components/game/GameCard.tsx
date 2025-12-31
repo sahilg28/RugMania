@@ -65,9 +65,9 @@ export function GameCard({
       <div className="relative flex-1 px-2 sm:px-4 pb-2 sm:pb-3 flex flex-col items-center justify-center">
         {/* Level Controls - Positioned differently on mobile */}
         <div className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 sm:gap-3 z-20">
-          <button onClick={() => onLevelChange("up")} disabled={currentLevel >= 10 || gameState.phase !== "idle"}
+          <button onClick={() => onLevelChange("up")} disabled={currentLevel >= 15 || gameState.phase !== "idle"}
             className={cn("w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-lg border-2 transition-all",
-              currentLevel < 10 && gameState.phase === "idle" ? "bg-lime-400 text-black border-black shadow-brutal-sm hover:bg-lime-300" : "bg-zinc-800 text-zinc-500 border-zinc-700 cursor-not-allowed")}>
+              currentLevel < 15 && gameState.phase === "idle" ? "bg-lime-400 text-black border-black shadow-brutal-sm hover:bg-lime-300" : "bg-zinc-800 text-zinc-500 border-zinc-700 cursor-not-allowed")}>
             <ArrowUp className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
           <button onClick={() => onLevelChange("down")} disabled={currentLevel <= 1 || gameState.phase !== "idle"}
@@ -88,10 +88,10 @@ export function GameCard({
                 transition={{ type: "spring", stiffness: 300, damping: 25 }}
                 className="relative z-20 -mb-2 sm:-mb-3 inline-flex items-center gap-1 sm:gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-lime-400 text-black rounded-lg border-2 border-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] sm:shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
                 <span className="text-lg sm:text-2xl font-black">
-                  Lvl {gameState.phase === "playing" || gameState.phase === "won" ? gameState.currentLevel + 1 : currentLevel}:
+                  Lvl {gameState.phase === "playing" || gameState.phase === "won" || gameState.phase === "rugged" ? gameState.currentLevel + 1 : currentLevel}:
                 </span>
                 <span className="text-lg sm:text-2xl font-black">
-                  {gameState.phase === "playing" || gameState.phase === "won"
+                  {gameState.phase === "playing" || gameState.phase === "won" || gameState.phase === "rugged"
                     ? (isDemo ? gameState.multiplier : gameState.multiplier / 1e18).toFixed(2)
                     : MULTIPLIERS[selectedDifficulty][(currentLevel || 1) - 1]?.toFixed(2) || "1.00"}x
                 </span>

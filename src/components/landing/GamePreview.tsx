@@ -6,16 +6,21 @@ import { ArrowUp, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const LEVELS = [
-  { level: 1, multiplier: 1.18 },
-  { level: 2, multiplier: 1.39 },
-  { level: 3, multiplier: 1.65 },
-  { level: 4, multiplier: 1.95 },
-  { level: 5, multiplier: 2.30 },
-  { level: 6, multiplier: 2.72 },
-  { level: 7, multiplier: 3.21 },
-  { level: 8, multiplier: 3.79 },
-  { level: 9, multiplier: 4.48 },
-  { level: 10, multiplier: 5.29 },
+  { level: 1, multiplier: 1.25 },
+  { level: 2, multiplier: 1.56 },
+  { level: 3, multiplier: 1.95 },
+  { level: 4, multiplier: 2.44 },
+  { level: 5, multiplier: 3.05 },
+  { level: 6, multiplier: 3.81 },
+  { level: 7, multiplier: 4.77 },
+  { level: 8, multiplier: 5.96 },
+  { level: 9, multiplier: 7.44 },
+  { level: 10, multiplier: 9.31 },
+  { level: 11, multiplier: 11.64 },
+  { level: 12, multiplier: 14.55 },
+  { level: 13, multiplier: 18.19 },
+  { level: 14, multiplier: 22.74 },
+  { level: 15, multiplier: 28.43 },
 ]
 
 function PreviewDoor() {

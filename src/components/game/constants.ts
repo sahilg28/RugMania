@@ -5,7 +5,7 @@ export function calculateMultipliers(doors: number, maxLevels: number = 15): num
   const multipliers: number[] = [];
   const perLevelMultiplier = doors / (doors - 1);
   
-  for (let level = 0; level < maxLevels; level++) {
+  for (let level = 1; level <= maxLevels; level++) {
     // Level 0 = 1x (just placed bet), Level 1+ = compounded
     const multiplier = Math.pow(perLevelMultiplier, level);
     multipliers.push(parseFloat(multiplier.toFixed(2)));

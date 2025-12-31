@@ -59,6 +59,38 @@ async function ensureDbSetup(db: Db): Promise<void> {
     validationLevel: "moderate",
   });
 
+
+
+  await ensureCollection(db, "gamesessions", {
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["playerAddress", "serverSeed", "serverSeedHash", "betAmount", "difficulty", "status"],
+      properties: {
+        playerAddress: { bsonType: "string" },
+        serverSeed: { bsonType: "string" },
+        serverSeedHash: { bsonType: "string" },
+        betAmount: { bsonType: "string" }, // Your existing doc stores as wei string
+        difficulty: { bsonType: "number" },
+        status: { bsonType: "string" }, // "pending", "completed", etc.
+        createdAt: { bsonType: "date" },
+        updatedAt: { bsonType: "date" },
+        expiresAt: { bsonType: "date" },
+        // Optional fields for future use
+        currentLevel: { bsonType: "number" },
+      },
+    },
+  },
+  validationAction: "warn",
+  validationLevel: "moderate",
+});
+
+// Add indexes for gamesessions
+const gameSessions = db.collection("gamesessions");
+await gameSessions.createIndex({ playerAddress: 1 }, { unique: true }); // One active session per player
+await gameSessions.createIndex({ status: 1, expiresAt: 1 }); // For cleanup of expired sessions
+await gameSessions.createIndex({ createdAt: -1 }); // For recent sessions
+
   // Indexes
   const users = db.collection("users");
   await users.createIndex({ address: 1 }, { unique: true });

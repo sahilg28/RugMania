@@ -99,10 +99,18 @@ export function ControlPanel({
             {/* Play Button */}
             <button 
               onClick={onStartGame} 
-              disabled={!amount || parseFloat(amount) < 0.1 || parseFloat(amount) > balance}
+              disabled={!amount || parseFloat(amount) < 0.1 || parseFloat(amount) > balance || isPlacingBet}
               className="w-full py-3 sm:py-4 text-sm sm:text-base bg-lime-400 text-black font-bold rounded-xl border-2 border-black shadow-brutal-sm hover:bg-lime-300 hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {!amount || parseFloat(amount) < 0.1 ? "Enter Amount" : parseFloat(amount) > balance ? "Insufficient Balance" : "PLAY NOW"}
+              {isPlacingBet ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4 animate-spin text-black" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Placing Bet...
+                </span>
+              ) : !amount || parseFloat(amount) < 0.1 ? "Enter Amount" : parseFloat(amount) > balance ? "Insufficient Balance" : "PLAY NOW"}
             </button>
           </div>
         ) : (
@@ -136,10 +144,27 @@ export function ControlPanel({
             </div>
 
             <div className="flex gap-2">
-              <button onClick={onStartGame} disabled={isPlacingBet || !amount || parseFloat(amount) < 0.1 || parseFloat(amount) > maxBetValue || parseFloat(amount) > balance}
-                className="flex-1 py-2.5 sm:py-3 text-zinc-400 font-bold text-xs sm:text-sm rounded-lg border-2 border-zinc-700 bg-zinc-800 hover:bg-lime-400 hover:text-black hover:border-black transition-all disabled:opacity-50">
-                {isPlacingBet ? "Placing Bet..." : !amount || parseFloat(amount) < 0.1 ? "Min Bet: 0.1 MNT" : parseFloat(amount) > maxBetValue ? `Max Bet: ${maxBetValue.toFixed(2)} MNT` : parseFloat(amount) > balance ? "Insufficient Balance" : "Place Bet"}
-              </button>
+            <button
+              onClick={onStartGame}
+              disabled={isPlacingBet || !amount || parseFloat(amount) < 0.1 || parseFloat(amount) > maxBetValue || parseFloat(amount) > balance}
+              className="flex-1 py-2.5 sm:py-3 text-zinc-400 font-bold text-xs sm:text-sm rounded-lg border-2 border-zinc-700 bg-zinc-800 hover:bg-lime-400 hover:text-black hover:border-black transition-all disabled:opacity-50"
+            >
+              {isPlacingBet ? (
+                <span className="flex items-center justify-center gap-2 text-white">
+                  <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Placing Bet...
+                </span>
+              ) : !amount || parseFloat(amount) < 0.1
+                ? "Min Bet: 0.1 MNT"
+                : parseFloat(amount) > maxBetValue
+                ? `Max Bet: ${maxBetValue.toFixed(2)} MNT`
+                : parseFloat(amount) > balance
+                ? "Insufficient Balance"
+                : "Place Bet"}
+            </button>
               {!isDemo && onOpenProvablyFair && (
                 <button 
                   onClick={onOpenProvablyFair}
@@ -165,15 +190,17 @@ export function ControlPanel({
           <div className="flex items-center justify-between px-1 sm:px-2">
             <div className="text-zinc-400 text-xs sm:text-sm">
               <span className="font-medium">Multiplier: </span>
-              <span className="text-white font-bold">{(isDemo ? gameState.multiplier : gameState.multiplier / 1e18).toFixed(2)}x</span>
+              <span className="text-white font-bold">
+                {(isDemo ? gameState.multiplier * 0.95 : (gameState.multiplier / 1e18) * 0.95).toFixed(2)}x
+              </span>
             </div>
             <div className="text-zinc-400 text-xs sm:text-sm">
               <span className="font-medium">Win: </span>
               <span className="text-lime-400 font-bold">
-                {isDemo 
-                  ? gameState.potentialWin.toFixed(4) 
-                  : (gameState.betAmount * (gameState.multiplier / 1e18) * 0.95).toFixed(4)
-                } MNT
+                {(isDemo 
+                  ? gameState.potentialWin * 0.95 
+                  : gameState.betAmount * (gameState.multiplier / 1e18) * 0.95
+                ).toFixed(4)} MNT
               </span>
             </div>
           </div>
@@ -197,9 +224,23 @@ export function ControlPanel({
             </div>
           ) : (
             <div className="flex gap-2 sm:gap-3">
-              <button onClick={onPlayAgain} className="flex-1 py-2.5 sm:py-3 text-sm sm:text-base bg-lime-400 text-black font-bold rounded-lg border-2 border-black shadow-brutal-sm hover:bg-lime-300 transition-all">Play Again</button>
-              <button onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just got RUGGED in RugMania 💀 Think you can survive longer? ${window.location.href}`)}`, "_blank")}
-                className="flex-1 py-2.5 sm:py-3 text-sm sm:text-base bg-black text-white font-bold rounded-lg border-2 border-zinc-700 hover:border-white transition-all">Share on X</button>
+              <button
+                onClick={onPlayAgain}
+                className="flex-1 py-2.5 sm:py-3 text-sm sm:text-base bg-lime-400 text-black font-bold rounded-lg border-2 border-black shadow-brutal-sm hover:bg-lime-300 transition-all"
+              >
+                Play Again
+              </button>
+              <button
+                onClick={() => {
+                  const shareText = encodeURIComponent(
+                    "I just got RUGGED in RugMania 💀 Think you can survive longer? Play now at https://rug-mania.vercel.app/"
+                  )
+                  window.open(`https://twitter.com/intent/tweet?text=${shareText}`, "_blank")
+                }}
+                className="flex-1 py-2.5 sm:py-3 text-sm sm:text-base bg-black text-white font-bold rounded-lg border-2 border-zinc-700 hover:border-white transition-all"
+              >
+                Share on X
+              </button>
             </div>
           )}
         </div>
@@ -221,9 +262,24 @@ export function ControlPanel({
             </div>
           ) : (
             <div className="flex gap-2 sm:gap-3">
-              <button onClick={onPlayAgain} className="flex-1 py-2.5 sm:py-3 text-sm sm:text-base bg-lime-400 text-black font-bold rounded-lg border-2 border-black shadow-brutal-sm hover:bg-lime-300 transition-all">Play Again</button>
-              <button onClick={() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just hit ${(isDemo ? gameState.multiplier : gameState.multiplier / 1e18).toFixed(2)}x in RugMania 🔥 ${window.location.href}`)}`, "_blank")}
-                className="flex-1 py-2.5 sm:py-3 text-sm sm:text-base bg-black text-white font-bold rounded-lg border-2 border-zinc-700 hover:border-white transition-all">Share on X</button>
+              <button
+                onClick={onPlayAgain}
+                className="flex-1 py-2.5 sm:py-3 text-sm sm:text-base bg-lime-400 text-black font-bold rounded-lg border-2 border-black shadow-brutal-sm hover:bg-lime-300 transition-all"
+              >
+                Play Again
+              </button>
+              <button
+                onClick={() => {
+                  const multiplierText = (isDemo ? gameState.multiplier : gameState.multiplier / 1e18).toFixed(2)
+                  const shareText = encodeURIComponent(
+                    `I just hit ${multiplierText}x in RugMania 🔥 Can you beat it? Play now at https://rug-mania.vercel.app/`
+                  )
+                  window.open(`https://twitter.com/intent/tweet?text=${shareText}`, "_blank")
+                }}
+                className="flex-1 py-2.5 sm:py-3 text-sm sm:text-base bg-black text-white font-bold rounded-lg border-2 border-zinc-700 hover:border-white transition-all"
+              >
+                Share on X
+              </button>
             </div>
           )}
         </div>

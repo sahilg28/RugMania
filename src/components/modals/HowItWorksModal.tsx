@@ -14,28 +14,28 @@ export function HowItWorksModal({ isOpen, onClose }: HowItWorksModalProps) {
       isOpen={isOpen}
       onClose={onClose}
       title="How It Works"
-      subtitle="Learn how to play RugMania and understand the game mechanics"
+      subtitle="Learn the flow, avoid the rug, lock in your wins"
     >
       <div>
         <AccordionItem title="Game Overview" defaultOpen>
           <p>
-            The Run to 100x has begun! Choose Safe Doors, Dodge the Rugs. The more you run, the more you can earn!
+            Race to 100x by picking safe doors and dodging rugs. Each level you survive boosts your multiplier—cash out before you get rugged.
           </p>
         </AccordionItem>
 
         <AccordionItem title="How to Play">
           <ol className="space-y-2 list-decimal list-inside">
-            <li>Choose your bet amount and difficulty, and click Place Bet</li>
-            <li>Pick one door from the visible set of doors</li>
-            <li>Avoid the rugpull door. Each level hides one rugpull door that rugs you to zero</li>
-            <li>Survive to multiply. Your payout multiplier increases with every level you survive</li>
-            <li>Cash out anytime to lock in your winnings before you get rugged!</li>
+            <li>Pick your bet and difficulty, then hit Place Bet.</li>
+            <li>Choose one door each round; one door is always the rug.</li>
+            <li>If you hit the rug door, the run ends and you lose the round.</li>
+            <li>Every safe pick increases your multiplier for that run.</li>
+            <li>Cash out anytime to secure your current winnings.</li>
           </ol>
         </AccordionItem>
 
         <AccordionItem title="Provably Fair">
           <p>
-            Every game outcome is cryptographically verifiable using our provably fair system. You can verify that each game result was predetermined and not manipulated.
+            Every round is pre-committed and verifiable. Check the revealed seeds after each run to confirm the outcome was fixed before you played.
           </p>
         </AccordionItem>
       </div>

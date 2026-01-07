@@ -92,8 +92,8 @@ export function GameCard({
                 </span>
                 <span className="text-lg sm:text-2xl font-black">
                   {gameState.phase === "playing" || gameState.phase === "won" || gameState.phase === "rugged"
-                    ? (isDemo ? gameState.multiplier : gameState.multiplier / 1e18).toFixed(2)
-                    : MULTIPLIERS[selectedDifficulty][(currentLevel || 1) - 1]?.toFixed(2) || "1.00"}x
+                    ? (isDemo ? gameState.multiplier * 0.95 : (gameState.multiplier / 1e18) * 0.95).toFixed(2)
+                    : (MULTIPLIERS[selectedDifficulty][(currentLevel || 1) - 1] * 0.95)?.toFixed(2) || "1.00"}x
                 </span>
               </motion.div>
             </AnimatePresence>

@@ -27,13 +27,6 @@ export function Loading() {
           ))}
         </div>
         
-        <motion.p 
-          className="text-main font-black mt-6 text-sm tracking-widest uppercase"
-          animate={{ opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-        >
-          Loading
-        </motion.p>
       </div>
     </div>
   )

@@ -121,7 +121,7 @@ export function Leaderboard({ animated = false, className }: LeaderboardProps) {
             <div className="flex flex-col items-center justify-center h-full py-8 text-zinc-500">
               <p className="text-sm text-center px-4">
                 {tab === 'weekly' 
-                  ? "No winners this week yet. Be the first!" 
+                  ? "No players this week yet. Be the first!" 
                   : "No players yet. Be the first to play!"}
               </p>
             </div>

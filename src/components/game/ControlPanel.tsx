@@ -110,7 +110,11 @@ export function ControlPanel({
                   </svg>
                   Placing Bet...
                 </span>
-              ) : !amount || parseFloat(amount) < 0.1 ? "Enter Amount" : parseFloat(amount) > balance ? "Insufficient Balance" : "PLAY NOW"}
+              ) : !amount || parseFloat(amount) < 0.1
+                ? "Enter Amount"
+                : parseFloat(amount) > balance
+                ? "Add more funds"
+                : "PLAY NOW"}
             </button>
           </div>
         ) : (
@@ -162,7 +166,7 @@ export function ControlPanel({
                 : parseFloat(amount) > maxBetValue
                 ? `Max Bet: ${maxBetValue.toFixed(2)} MNT`
                 : parseFloat(amount) > balance
-                ? "Insufficient Balance"
+                ? "Add more funds"
                 : "Place Bet"}
             </button>
               {!isDemo && onOpenProvablyFair && (

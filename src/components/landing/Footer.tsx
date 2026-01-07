@@ -29,10 +29,10 @@ export function Footer({ onOpenHowItWorks }: FooterProps) {
             </a>
           </nav>
           <a 
-            href="https://x.com/sahilgupta_as" 
+            href="https://x.com/rug_mania" 
             target="_blank" 
             rel="noreferrer"
-            aria-label="Open Sahil Gupta profile on X"
+            aria-label="Open RugMania profile on X"
             className="text-zinc-500 hover:text-white transition-colors"
           >
             <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">

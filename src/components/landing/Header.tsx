@@ -239,12 +239,12 @@ export function Header({ isGame = false, isDemo = false, isLanding = false, onEx
 
             {/* Social Links */}
             <a
-              href="https://x.com/sahilgupta_as"
+              href="https://x.com/rug_mania"
               target="_blank"
               rel="noreferrer"
               onClick={() => setMobileMenuOpen(false)}
               className="w-full flex items-center gap-3 px-4 py-3 text-black hover:bg-zinc-100 transition-colors border-b border-zinc-200"
-              aria-label="Open Sahil Gupta profile on X"
+              aria-label="Open RugMania profile on X"
             >
               <span className="w-8 h-8 flex items-center justify-center rounded-full bg-black hover:bg-zinc-800 transition-colors">
                 <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
